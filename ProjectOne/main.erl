@@ -14,7 +14,8 @@
 -export([main/3, mining/2]).
 
 
-main(Cores, 0, N) ->
+main(0, Times, N) ->
+    Times,
     N,
     done;
 main(Cores, Times, N) ->
