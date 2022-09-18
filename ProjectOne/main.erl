@@ -56,7 +56,6 @@ slave(Master_Node) ->
     
     receive
         {Work_load, N} ->
-            io:format("slave recived job assignment"),
             mine(Work_load, N, Master_Node)
     end.
 
