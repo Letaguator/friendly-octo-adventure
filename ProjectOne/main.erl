@@ -11,36 +11,62 @@
 
 
 
--export([main/3, mining/2]).
-
-
-main(0, Times, N) ->
-    Times,
-    N,
-    done;
-main(Cores, Times, N) ->
-    spawn(main, mining, [Times, N]),
-    main(Cores - 1, Times, N).
+-export([start_master/2, start_slave/1, mine/3, slave/1, master/2]).
 
 
 
-mining(0, N) ->
-    N,
-    done;
 
-mining(Times, N) ->
+master(Work_load, N) ->
+
+    
+    receive
+        {slave, Slave_ID} ->                                                %%% a new slave is ask for job, send job requirements to the slave
+            Slave_ID ! {Work_load, N},
+            master(Work_load, N);
+        {found, Key, Hash} ->
+            io:format("~p:", [Key]),
+            io:format("~64.16.0b~n", [Hash]),
+            master(Work_load, N);
+        {finished} ->
+            io:format("job done~n", []),
+            master(Work_load, N)
+    end.
+
+
+
+mine(0, N, Master_Node) ->
+    {master, Master_Node} ! finished;
+
+mine(Work_load, N, Master_Node) ->
     Key = concat("liruiyang;", rnd:rnd_chars_numbers(10)),
     Hash = binary:decode_unsigned(crypto:hash(sha256, rnd_chars_numbers(10))),
     case Hash < math:pow(16, 64 - N) of
         true ->
-            io:format("~p:", [Key]),
-            io:format("~64.16.0b~n", [Hash]),
-            mining(Times - 1, N);
+            {master, Master_Node} ! {found, Key, Hash},
+            mine(Work_load - 1, N, Master_Node);
         false ->
-            mining(Times, N)
+            mine(Work_load, N, Master_Node)
     end.
-    
 
+
+slave(Master_Node) ->
+
+
+    {master, Master_Node} ! {slave, self()},
+    
+    receive
+        {Work_load, N} ->
+            io:format("slave recived job assignment"),
+            mine(Work_load, N, Master_Node)
+    end.
+
+
+
+start_master(Work_load, N) ->
+    register(master, spawn(main, master, [Work_load, N])).
+
+start_slave(Master_Node) ->
+    register(slave, spawn(main, slave, [Master_Node])).
 
 
 
