@@ -1,5 +1,10 @@
-%% @author ruiyang
-%% @doc @todo Add 
+%%% @author ruiyang
+%%% run start_master/2 on the server
+%%% run start_slave/1 on the working machine
+
+
+
+
 
 -module(main).
 
@@ -8,19 +13,19 @@
 -import(binary, [decode_unsigned/1]).
 -import(crypto, [hash/1]).
 
-
-
-
 -export([start_master/2, start_slave/1, mine/3, slave/1, master/2]).
 
 
 
 
-master(Work_load, N) ->
 
-    
+
+
+
+
+master(Work_load, N) ->
     receive
-        {slave, Slave_ID} ->                                                %%% a new slave is ask for job, send job requirements to the slave
+        {slave, Slave_ID} ->                                                
             Slave_ID ! {Work_load, N},
             master(Work_load, N);
         {found, Key, Hash} ->
@@ -31,6 +36,7 @@ master(Work_load, N) ->
             io:format("job done~n", []),
             master(Work_load, N)
     end.
+
 
 
 
@@ -49,15 +55,17 @@ mine(Work_load, N, Master_Node) ->
     end.
 
 
+
+
 slave(Master_Node) ->
-
-
     {master, Master_Node} ! {slave, self()},
     
     receive
         {Work_load, N} ->
             mine(Work_load, N, Master_Node)
     end.
+
+
 
 
 
