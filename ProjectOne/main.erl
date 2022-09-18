@@ -27,7 +27,7 @@ master(Work_load, N) ->
             io:format("~p:", [Key]),
             io:format("~64.16.0b~n", [Hash]),
             master(Work_load, N);
-        {finished} ->
+        finished ->
             io:format("job done~n", []),
             master(Work_load, N)
     end.
