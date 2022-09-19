@@ -45,7 +45,7 @@ mine(0, N, Master_Node) ->
 
 mine(Work_load, N, Master_Node) ->
     Key = concat("liruiyang;", rnd:rnd_chars_numbers(10)),
-    Hash = binary:decode_unsigned(crypto:hash(sha256, rnd_chars_numbers(10))),
+    Hash = binary:decode_unsigned(crypto:hash(sha256, Key)),
     case Hash < math:pow(16, 64 - N) of
         true ->
             {master, Master_Node} ! {found, Key, Hash},
