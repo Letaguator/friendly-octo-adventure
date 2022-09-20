@@ -41,8 +41,8 @@ master(Work_load, N) ->
 
 
 mine(0, N, Master_Node) ->
-    {master, Master_Node} ! finished;
-
+   
+ {master, Master_Node} ! finished;
 mine(Work_load, N, Master_Node) ->
     Key = concat("liruiyang;", rnd:rnd_chars_numbers(10)),
     Hash = binary:decode_unsigned(crypto:hash(sha256, Key)),
