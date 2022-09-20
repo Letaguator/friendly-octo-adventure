@@ -12,10 +12,11 @@
 -import(crypto, [hash/1]).
 -import(timer, [apply_after/4]).
 
--export([start/1, start_master/2, mine/3, slave/1, master/2, master/3, start_slaves/2, start_perf_analyzer/1]).
+-export([start/1, start_master/2, mine/3, slave/1, master/2, master/3, start_slaves/2, start_perf_analyzer/2]).
 
 
 master(WorkerNodeCount, AmountOfCoins, N) ->
+    start_perf_analyzer(0, self()),
     start_slaves(WorkerNodeCount, node()),
     master(AmountOfCoins, N).
 
@@ -34,19 +35,10 @@ master(AmountOfCoins, N) ->
     end.
 
 
-<<<<<<< HEAD
-
-
-mine(0, N, Master_Node) ->
-   
- {master, Master_Node} ! finished;
-mine(Work_load, N, Master_Node) ->
-=======
 mine(0, _, Master_Node) ->
     {master, Master_Node} ! finished;
 
 mine(AmountOfCoins, N, Master_Node) ->
->>>>>>> 9a44ad0 (Update code and add perf measuring)
     Key = concat("liruiyang;", rnd:rnd_chars_numbers(10)),
     Hash = binary:decode_unsigned(crypto:hash(sha256, Key)),
     case Hash < math:pow(16, 64 - N) of
@@ -74,15 +66,19 @@ start_slaves(N, Master_Node) ->
     start_slaves(N - 1, Master_Node).
 
 start(NumberOfLeadingZeroesInHash) ->
-    start_perf_analyzer(0),
     start_master(16, NumberOfLeadingZeroesInHash).
 
-start_perf_analyzer(LastCpuTime) ->
-    {CpuTime, _} = statistics(runtime),
-    io:fwrite("CPU Time - Time Passed Ratio: "),
-    io:write((CpuTime - LastCpuTime) / 5000),
-    io:fwrite("\n"),
-    apply_after(5000, main, start_perf_analyzer, [CpuTime]).
+start_perf_analyzer(LastCpuTime, Master_PID) ->
+    case is_process_alive(Master_PID) of
+        false ->
+            ok;
+        true ->
+            {CpuTime, _} = statistics(runtime),
+            io:fwrite("CPU Time - Time Passed Ratio: "),
+            io:write((CpuTime - LastCpuTime) / 5000),
+            io:fwrite("\n"),
+            apply_after(5000, main, start_perf_analyzer, [CpuTime, Master_PID])
+    end.
 
 start_master(AmountOfCoins, N) ->
     AmountOfWorkerNodes = 5,
