@@ -12,8 +12,7 @@
 -import(crypto, [hash/1]).
 -import(timer, [apply_after/4, now_diff/2]).
 
-<<<<<<< Updated upstream
--export([start/1, start_master/2, mine/3, slave/1, master/2, master/3, start_slaves/2, start_perf_analyzer/2]).
+-export([start/1, start_master/2, mine/3, slave/1, master/4, master/5, start_slaves/2, start_perf_analyzer/2]).
 
 get_random_string(Length) ->
   AllowedChars = "abcdefghijklmnopqrstuvwxyz1234567890",
@@ -23,19 +22,10 @@ get_random_string(Length) ->
     [], lists:seq(1, Length)
 ).
 
-master(WorkerNodeCount, AmountOfCoins, N) ->
-    start_perf_analyzer(0, self()),
-=======
--export([start/1, start_master/2, mine/3, slave/1, master/4, master/5, start_slaves/2, start_perf_analyzer/1]).
-
-
 master(WorkerNodeCount, AmountOfCoins, N, CoinMined, StartTime) ->
->>>>>>> Stashed changes
+    start_perf_analyzer(0, self()),
     start_slaves(WorkerNodeCount, node()),
     master(AmountOfCoins, N, CoinMined, StartTime).
-
-
-
 
 master(AmountOfCoins, N, CoinMined, StartTime) ->
     if 
