@@ -10,28 +10,45 @@
 -import(rnd, [rnd_chars_numbers/1]).
 -import(binary, [decode_unsigned/1]).
 -import(crypto, [hash/1]).
--import(timer, [apply_after/4]).
+-import(timer, [apply_after/4, now_diff/2]).
 
+<<<<<<< Updated upstream
 -export([start/1, start_master/2, mine/3, slave/1, master/2, master/3, start_slaves/2, start_perf_analyzer/2]).
 
 
 master(WorkerNodeCount, AmountOfCoins, N) ->
     start_perf_analyzer(0, self()),
-    start_slaves(WorkerNodeCount, node()),
-    master(AmountOfCoins, N).
+=======
+-export([start/1, start_master/2, mine/3, slave/1, master/4, master/5, start_slaves/2, start_perf_analyzer/1]).
 
-master(AmountOfCoins, N) ->
+
+master(WorkerNodeCount, AmountOfCoins, N, CoinMined, StartTime) ->
+>>>>>>> Stashed changes
+    start_slaves(WorkerNodeCount, node()),
+    master(AmountOfCoins, N, CoinMined, StartTime).
+
+
+
+
+master(AmountOfCoins, N, CoinMined, StartTime) ->
+    if 
+        AmountOfCoins == CoinMined ->
+            io:format("Program run time:~f~n(ms)", [now_diff(erlang:timestamp(), StartTime) / 1000]),
+            exit(done);
+        true -> ok
+    end,
+
     receive
         {slave, Slave_ID} ->                                                
             Slave_ID ! {AmountOfCoins, N},
-            master(AmountOfCoins, N);
+            master(AmountOfCoins, N, CoinMined, StartTime);
         {found, Key, Hash} ->
             io:format("~p:", [Key]),
             io:format("~64.16.0b~n", [Hash]),
-            master(AmountOfCoins, N);
+            master(AmountOfCoins, N, CoinMined + 1, StartTime);
         finished ->
             io:format("job done~n", []),
-            master(AmountOfCoins, N)
+            master(AmountOfCoins, N, CoinMined, StartTime)
     end.
 
 
@@ -51,7 +68,6 @@ mine(AmountOfCoins, N, Master_Node) ->
 
 
 slave(Master_Node) ->
-    io:fwrite("awef"),
     {master, Master_Node} ! {slave, self()},
     
     receive
@@ -82,4 +98,4 @@ start_perf_analyzer(LastCpuTime, Master_PID) ->
 
 start_master(AmountOfCoins, N) ->
     AmountOfWorkerNodes = 5,
-    register(master, spawn(main, master, [AmountOfWorkerNodes, AmountOfCoins, N])).
+    register(master, spawn(main, master, [AmountOfWorkerNodes, AmountOfCoins, N, 0, erlang:timestamp()])).
