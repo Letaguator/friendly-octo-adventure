@@ -25,10 +25,6 @@ get_random_string(Length) ->
 ).
 
 master(WorkerNodeCount, AmountOfCoins, N, CoinMined, StartTime) ->
-<<<<<<< Updated upstream
-    start_perf_analyzer(0, self()),
-=======
->>>>>>> Stashed changes
     start_slaves(WorkerNodeCount, node()),
     master(AmountOfCoins, N, CoinMined, StartTime).
 
@@ -99,12 +95,6 @@ start_perf_analyzer(LastCpuTime, Master_PID) ->
             apply_after(5000, main, start_perf_analyzer, [CpuTime, Master_PID])
     end.
 
-<<<<<<< Updated upstream
 start_master(AmountOfCoins, LeadingZerosForCoin) ->
     AmountOfWorkerNodes = 5,
     register(master, spawn(main, master, [AmountOfWorkerNodes, AmountOfCoins, LeadingZerosForCoin, 0, erlang:timestamp()])).
-=======
-start_master(AmountOfCoins, N) ->
-    AmountOfWorkerNodes = 12,
-    register(master, spawn(main, master, [AmountOfWorkerNodes, AmountOfCoins, N, 0, erlang:timestamp()])).
->>>>>>> Stashed changes
