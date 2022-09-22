@@ -15,6 +15,13 @@
 <<<<<<< Updated upstream
 -export([start/1, start_master/2, mine/3, slave/1, master/2, master/3, start_slaves/2, start_perf_analyzer/2]).
 
+get_random_string(Length) ->
+  AllowedChars = "abcdefghijklmnopqrstuvwxyz1234567890",
+  MaxLength = length(AllowedChars),
+  lists:foldl(
+    fun(_, Acc) -> [lists:nth(crypto:rand_uniform(1, MaxLength), AllowedChars)] ++ Acc end,
+    [], lists:seq(1, Length)
+).
 
 master(WorkerNodeCount, AmountOfCoins, N) ->
     start_perf_analyzer(0, self()),
@@ -56,7 +63,7 @@ mine(0, _, Master_Node) ->
     {master, Master_Node} ! finished;
 
 mine(AmountOfCoins, N, Master_Node) ->
-    Key = concat("liruiyang;", rnd:rnd_chars_numbers(10)),
+    Key = concat("liruiyang;", get_random_string(10)),
     Hash = binary:decode_unsigned(crypto:hash(sha256, Key)),
     case Hash < math:pow(16, 64 - N) of
         true ->
@@ -96,6 +103,6 @@ start_perf_analyzer(LastCpuTime, Master_PID) ->
             apply_after(5000, main, start_perf_analyzer, [CpuTime, Master_PID])
     end.
 
-start_master(AmountOfCoins, N) ->
+start_master(AmountOfCoins, LeadingZerosForCoin) ->
     AmountOfWorkerNodes = 5,
-    register(master, spawn(main, master, [AmountOfWorkerNodes, AmountOfCoins, N, 0, erlang:timestamp()])).
+    register(master, spawn(main, master, [AmountOfWorkerNodes, AmountOfCoins, LeadingZerosForCoin, 0, erlang:timestamp()])).
