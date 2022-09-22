@@ -3,6 +3,8 @@
 %%% run start_slave/1 on the working machine
 
 % N is the number of leading zeros for a potential coin
+%%% t0 change the amount of threads go to start_master
+%%% to change the number of coins mined go to  start
 
 -module(main).
 
@@ -23,14 +25,17 @@ get_random_string(Length) ->
 ).
 
 master(WorkerNodeCount, AmountOfCoins, N, CoinMined, StartTime) ->
+<<<<<<< Updated upstream
     start_perf_analyzer(0, self()),
+=======
+>>>>>>> Stashed changes
     start_slaves(WorkerNodeCount, node()),
     master(AmountOfCoins, N, CoinMined, StartTime).
 
 master(AmountOfCoins, N, CoinMined, StartTime) ->
     if 
         AmountOfCoins == CoinMined ->
-            io:format("Program run time:~f~n(ms)", [now_diff(erlang:timestamp(), StartTime) / 1000]),
+            io:format("Program run time:~fs~n", [now_diff(erlang:timestamp(), StartTime) / 100000]),
             exit(done);
         true -> ok
     end,
@@ -79,7 +84,8 @@ start_slaves(N, Master_Node) ->
     start_slaves(N - 1, Master_Node).
 
 start(NumberOfLeadingZeroesInHash) ->
-    start_master(16, NumberOfLeadingZeroesInHash).
+    %%% here to change the amount of coin mined by the entire program
+    start_master(200, NumberOfLeadingZeroesInHash).
 
 start_perf_analyzer(LastCpuTime, Master_PID) ->
     case is_process_alive(Master_PID) of
@@ -93,6 +99,12 @@ start_perf_analyzer(LastCpuTime, Master_PID) ->
             apply_after(5000, main, start_perf_analyzer, [CpuTime, Master_PID])
     end.
 
+<<<<<<< Updated upstream
 start_master(AmountOfCoins, LeadingZerosForCoin) ->
     AmountOfWorkerNodes = 5,
     register(master, spawn(main, master, [AmountOfWorkerNodes, AmountOfCoins, LeadingZerosForCoin, 0, erlang:timestamp()])).
+=======
+start_master(AmountOfCoins, N) ->
+    AmountOfWorkerNodes = 12,
+    register(master, spawn(main, master, [AmountOfWorkerNodes, AmountOfCoins, N, 0, erlang:timestamp()])).
+>>>>>>> Stashed changes
