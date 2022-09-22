@@ -25,6 +25,7 @@ get_random_string(Length) ->
 ).
 
 master(WorkerNodeCount, AmountOfCoins, N, CoinMined, StartTime) ->
+    start_perf_analyzer(0, self()),
     start_slaves(WorkerNodeCount, node()),
     master(AmountOfCoins, N, CoinMined, StartTime).
 
