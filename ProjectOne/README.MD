@@ -36,9 +36,8 @@ The way we calculate this ratio is by every 5 seconds doing a measure by checkin
 
 When running with the boss actor, performance actor and 8 worker nodes the resulting ratio was usually in the 7.5->7.95. An example value we read was: 7.9156. This was on a computer with 4 cores, 8 threads.
 
-### Coin with most 0s found
+### Coin with most 0s found (7 leading 0s)
 "liruiyang;hs1y8d9tuc" : 0000000b6a7e46d1e4e78f828c5b8a11bb504a4ccea40091126eb2094fafa728
-
 
 ### Largest number of working machines ran on
 Due to the lack of LAN and good ways to connect our PCs, we decided to run it on a single computer. That did not stop us from running with up to 12 worker actors, on a 6 core computer with a total of 12 threads. We did this with one node, but also with more nodes on the same PC. The expermient which we tried and documented the most was on Mathias computer, on which we ran 8 worker actors. by setting AmountOfWorkerNodes = 8. This led to a ratio of CPU time to real time around 7.70-7.92. This is an very good amount of parallelism!
