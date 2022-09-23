@@ -17,9 +17,6 @@
 -export([start/1, start_master/2, mine/4, slave/1, master/6, start_slaves/2, start_perf_analyzer/2]).
 
 
-
-
-
 get_random_string(Length) ->
   AllowedChars = "abcdefghijklmnopqrstuvwxyz1234567890",
   MaxLength = length(AllowedChars),
@@ -40,15 +37,10 @@ master(sub, WorkerNodeCount, AmountOfCoins , N, CoinMined, StartTime) ->
             exit(done);
         true -> ok
     end,
-
-
-
-
-
     receive
         {slave, Slave_ID} ->                                                
             Slave_ID ! {AmountOfCoins, N},
-            master(sub, AmountOfCoins, N, CoinMined, StartTime);
+            master(sub, WorkerNodeCount, AmountOfCoins, N, CoinMined, StartTime);
         {finished, CoinsFound} ->
             lists:foreach(fun(Entry) -> printEntry(Entry) end, CoinsFound),
             io:format("job done~n", []),
@@ -87,7 +79,7 @@ start_slaves(N, Master_Node) ->
     start_slaves(N - 1, Master_Node).
 
 start(NumberOfLeadingZeroesInHash) ->
-    %%% here to change the amount of coin mined by the entire program
+    %%% Here to change the amount of coin mined by the entire program
     start_master(10, NumberOfLeadingZeroesInHash).
 
 start_perf_analyzer(LastCpuTime, Master_PID) ->
@@ -103,5 +95,5 @@ start_perf_analyzer(LastCpuTime, Master_PID) ->
     end.
 
 start_master(AmountOfCoins, LeadingZerosForCoin) ->
-    AmountOfWorkerNodes = 1,
+    AmountOfWorkerNodes = 5,
     register(master, spawn(main, master, [main, AmountOfWorkerNodes, AmountOfCoins, LeadingZerosForCoin, 0, erlang:timestamp()])).
