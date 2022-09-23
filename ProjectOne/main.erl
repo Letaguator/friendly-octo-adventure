@@ -14,7 +14,7 @@
 -import(crypto, [hash/1]).
 -import(timer, [apply_after/4, now_diff/2]).
 
--export([start/1, start_master/2, mine/3, slave/1, master/6, start_slaves/2, start_perf_analyzer/2]).
+-export([start/1, start_master/2, mine/4, slave/1, master/6, start_slaves/2, start_perf_analyzer/2]).
 
 
 
@@ -47,39 +47,37 @@ master(sub, WorkerNodeCount, AmountOfCoins , N, CoinMined, StartTime) ->
 
     receive
         {slave, Slave_ID} ->                                                
-            Slave_ID ! {AmountOfCoins , N},
-            master(sub, WorkerNodeCount, AmountOfCoins, N, CoinMined, StartTime);
-        {found, Key, Hash} ->
-            io:format("~p:", [Key]),
-            io:format("~64.16.0b~n", [Hash]),
-            master(sub, WorkerNodeCount, AmountOfCoins, N, CoinMined + 1, StartTime);
-        finished ->
+            Slave_ID ! {AmountOfCoins, N},
+            master(sub, AmountOfCoins, N, CoinMined, StartTime);
+        {finished, CoinsFound} ->
+            lists:foreach(fun(Entry) -> printEntry(Entry) end, CoinsFound),
             io:format("job done~n", []),
             master(sub, WorkerNodeCount, AmountOfCoins, N, CoinMined, StartTime)
     end.
 
+printEntry({Key, Hash}) ->
+    io:format("~p:", [Key]),
+    io:format("~64.16.0b~n", [Hash]).
 
-mine(0, _, Master_Node) ->
-    {master, Master_Node} ! finished;
+mine(0, _, Master_Node, CoinsFound) ->
+    {master, Master_Node} ! {finished, CoinsFound};
 
-mine(AmountOfCoins, N, Master_Node) ->
+mine(AmountOfCoins, N, Master_Node, CoinsFound) ->
     Key = concat("liruiyang;", get_random_string(10)),
     Hash = binary:decode_unsigned(crypto:hash(sha256, Key)),
     case Hash < math:pow(16, 64 - N) of
         true ->
-            {master, Master_Node} ! {found, Key, Hash},
-            mine(AmountOfCoins - 1, N, Master_Node);
+            mine(AmountOfCoins - 1, N, Master_Node, [{Key, Hash} | CoinsFound]);
         false ->
-            mine(AmountOfCoins, N, Master_Node)
+            mine(AmountOfCoins, N, Master_Node, CoinsFound)
     end.
-
 
 slave(Master_Node) ->
     {master, Master_Node} ! {slave, self()},
     
     receive
         {AmountOfCoins, N} ->
-            mine(AmountOfCoins, N, Master_Node)
+            mine(AmountOfCoins, N, Master_Node, [])
     end.
 
 
