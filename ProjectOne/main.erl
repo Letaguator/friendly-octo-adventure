@@ -28,23 +28,24 @@ get_random_string(Length) ->
 master(main, WorkerNodeCount, AmountOfCoins, N, CoinMined, StartTime) ->
     start_perf_analyzer(0, self()),
     start_slaves(WorkerNodeCount, node()),
-    master(sub, WorkerNodeCount,  AmountOfCoins / WorkerNodeCount, N, CoinMined, StartTime);
+    master(sub, WorkerNodeCount,  AmountOfCoins, N, CoinMined, StartTime);
 
 master(sub, WorkerNodeCount, AmountOfCoins , N, CoinMined, StartTime) ->
-    if 
-        AmountOfCoins == CoinMined ->
+    AmountOfWork = 10,
+    if
+        AmountOfCoins < CoinMined ->
             io:format("Program run time:~fs~n", [now_diff(erlang:timestamp(), StartTime) / 1000000]),
             exit(done);
         true -> ok
     end,
     receive
         {slave, Slave_ID} ->                                                
-            Slave_ID ! {AmountOfCoins, N},
+            Slave_ID ! {AmountOfWork, N},
             master(sub, WorkerNodeCount, AmountOfCoins, N, CoinMined, StartTime);
         {finished, CoinsFound} ->
             lists:foreach(fun(Entry) -> printEntry(Entry) end, CoinsFound),
             io:format("job done~n", []),
-            master(sub, WorkerNodeCount, AmountOfCoins, N, CoinMined, StartTime)
+            master(sub, WorkerNodeCount, AmountOfCoins - length(CoinsFound), N, CoinMined, StartTime)
     end.
 
 printEntry({Key, Hash}) ->
@@ -59,6 +60,7 @@ mine(AmountOfCoins, N, Master_Node, CoinsFound) ->
     Hash = binary:decode_unsigned(crypto:hash(sha256, Key)),
     case Hash < math:pow(16, 64 - N) of
         true ->
+            io:write(AmountOfCoins),
             mine(AmountOfCoins - 1, N, Master_Node, [{Key, Hash} | CoinsFound]);
         false ->
             mine(AmountOfCoins, N, Master_Node, CoinsFound)
@@ -95,5 +97,6 @@ start_perf_analyzer(LastCpuTime, Master_PID) ->
     end.
 
 start_master(AmountOfCoins, LeadingZerosForCoin) ->
+    % Here to change the amount of worker nodes used:
     AmountOfWorkerNodes = 5,
     register(master, spawn(main, master, [main, AmountOfWorkerNodes, AmountOfCoins, LeadingZerosForCoin, 0, erlang:timestamp()])).
