@@ -31,7 +31,7 @@ master(main, WorkerNodeCount, AmountOfCoins, N, CoinMined, StartTime) ->
     master(sub, WorkerNodeCount,  AmountOfCoins, N, CoinMined, StartTime);
 
 master(sub, WorkerNodeCount, AmountOfCoins , N, CoinMined, StartTime) ->
-    AmountOfWork = 10,
+    AmountOfWork = 6,
     if
         AmountOfCoins < CoinMined ->
             io:format("Program run time:~fs~n", [now_diff(erlang:timestamp(), StartTime) / 1000000]),
@@ -60,7 +60,6 @@ mine(AmountOfCoins, N, Master_Node, CoinsFound) ->
     Hash = binary:decode_unsigned(crypto:hash(sha256, Key)),
     case Hash < math:pow(16, 64 - N) of
         true ->
-            io:write(AmountOfCoins),
             mine(AmountOfCoins - 1, N, Master_Node, [{Key, Hash} | CoinsFound]);
         false ->
             mine(AmountOfCoins, N, Master_Node, CoinsFound)
@@ -82,7 +81,7 @@ start_slaves(N, Master_Node) ->
 
 start(NumberOfLeadingZeroesInHash) ->
     %%% Here to change the amount of coin mined by the entire program
-    start_master(10, NumberOfLeadingZeroesInHash).
+    start_master(40, NumberOfLeadingZeroesInHash).
 
 start_perf_analyzer(LastCpuTime, Master_PID) ->
     case is_process_alive(Master_PID) of
