@@ -14,7 +14,11 @@
 -import(crypto, [hash/1]).
 -import(timer, [apply_after/4, now_diff/2]).
 
--export([start/1, start_master/2, mine/3, slave/1, master/4, master/5, start_slaves/2, start_perf_analyzer/2]).
+-export([start/1, start_master/2, mine/3, slave/1, master/6, start_slaves/2, start_perf_analyzer/2]).
+
+
+
+
 
 get_random_string(Length) ->
   AllowedChars = "abcdefghijklmnopqrstuvwxyz1234567890",
@@ -24,12 +28,12 @@ get_random_string(Length) ->
     [], lists:seq(1, Length)
 ).
 
-master(WorkerNodeCount, AmountOfCoins, N, CoinMined, StartTime) ->
+master(main, WorkerNodeCount, AmountOfCoins, N, CoinMined, StartTime) ->
     start_perf_analyzer(0, self()),
     start_slaves(WorkerNodeCount, node()),
-    master(AmountOfCoins, N, CoinMined, StartTime).
+    master(sub, WorkerNodeCount,  AmountOfCoins / WorkerNodeCount, N, CoinMined, StartTime);
 
-master(AmountOfCoins, N, CoinMined, StartTime) ->
+master(sub, WorkerNodeCount, AmountOfCoins , N, CoinMined, StartTime) ->
     if 
         AmountOfCoins == CoinMined ->
             io:format("Program run time:~fs~n", [now_diff(erlang:timestamp(), StartTime) / 1000000]),
@@ -37,17 +41,21 @@ master(AmountOfCoins, N, CoinMined, StartTime) ->
         true -> ok
     end,
 
+
+
+
+
     receive
         {slave, Slave_ID} ->                                                
-            Slave_ID ! {AmountOfCoins, N},
-            master(AmountOfCoins, N, CoinMined, StartTime);
+            Slave_ID ! {AmountOfCoins , N},
+            master(sub, WorkerNodeCount, AmountOfCoins, N, CoinMined, StartTime);
         {found, Key, Hash} ->
             io:format("~p:", [Key]),
             io:format("~64.16.0b~n", [Hash]),
-            master(AmountOfCoins, N, CoinMined + 1, StartTime);
+            master(sub, WorkerNodeCount, AmountOfCoins, N, CoinMined + 1, StartTime);
         finished ->
             io:format("job done~n", []),
-            master(AmountOfCoins, N, CoinMined, StartTime)
+            master(sub, WorkerNodeCount, AmountOfCoins, N, CoinMined, StartTime)
     end.
 
 
@@ -97,5 +105,5 @@ start_perf_analyzer(LastCpuTime, Master_PID) ->
     end.
 
 start_master(AmountOfCoins, LeadingZerosForCoin) ->
-    AmountOfWorkerNodes = 4,
-    register(master, spawn(main, master, [AmountOfWorkerNodes, AmountOfCoins, LeadingZerosForCoin, 0, erlang:timestamp()])).
+    AmountOfWorkerNodes = 1,
+    register(master, spawn(main, master, [main, AmountOfWorkerNodes, AmountOfCoins, LeadingZerosForCoin, 0, erlang:timestamp()])).

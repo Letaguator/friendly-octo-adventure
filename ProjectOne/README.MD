@@ -34,7 +34,7 @@ main:start_slaves(NumberOfSlaves, '<processName>@<nodeName>').
 ### Ratio of CPU time to Real time
 The way we calculate this ratio is by every 5 seconds doing a measure by checking how much CPU time the Erlang VM used the previous 5 seconds. We then devide this value by the 5 seconds in order to get our actual ratio. The weakness with this strategy is that we have to not run other Erlang programs and the VM itself can influence the result.
 
-When running with the boss actor, performance actor and 8 worker nodes the resulting ratio was usually in the 7.5->7.95. An example value we read was: 7.9156. This was on a computer with 4 cores, 8 threads.
+When running with the boss actor, performance actor and 12 worker nodes the resulting ratio was usually in the 7.5->7.95. An example value we read was: 11.34. This was on a computer with 6 cores, 12 threads.
 
 ### Coin with most 0s found (7 leading 0s)
 "liruiyang;hs1y8d9tuc" : 0000000b6a7e46d1e4e78f828c5b8a11bb504a4ccea40091126eb2094fafa728
