@@ -31,6 +31,7 @@ master(main, WorkerNodeCount, TargetAmountOfCoins, N, CoinMined, StartTime) ->
     master(sub, WorkerNodeCount,  TargetAmountOfCoins, N, CoinMined, StartTime);
 
 master(sub, WorkerNodeCount, TargetAmountOfCoins , N, CoinMined, StartTime) ->
+    % Here to change amount of work
     AmountOfWork = 6,
     if
         TargetAmountOfCoins =< CoinMined ->
