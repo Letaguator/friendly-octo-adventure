@@ -25,15 +25,15 @@ get_random_string(Length) ->
     [], lists:seq(1, Length)
 ).
 
-master(main, WorkerNodeCount, AmountOfCoins, N, CoinMined, StartTime) ->
+master(main, WorkerNodeCount, TargetAmountOfCoins, N, CoinMined, StartTime) ->
     start_perf_analyzer(0, self()),
     start_slaves(WorkerNodeCount, node()),
-    master(sub, WorkerNodeCount,  AmountOfCoins, N, CoinMined, StartTime);
+    master(sub, WorkerNodeCount,  TargetAmountOfCoins, N, CoinMined, StartTime);
 
-master(sub, WorkerNodeCount, AmountOfCoins , N, CoinMined, StartTime) ->
+master(sub, WorkerNodeCount, TargetAmountOfCoins , N, CoinMined, StartTime) ->
     AmountOfWork = 6,
     if
-        AmountOfCoins < CoinMined ->
+        TargetAmountOfCoins =< CoinMined ->
             io:format("Program run time:~fs~n", [now_diff(erlang:timestamp(), StartTime) / 1000000]),
             exit(done);
         true -> ok
@@ -41,11 +41,11 @@ master(sub, WorkerNodeCount, AmountOfCoins , N, CoinMined, StartTime) ->
     receive
         {slave, Slave_ID} ->                                                
             Slave_ID ! {AmountOfWork, N},
-            master(sub, WorkerNodeCount, AmountOfCoins, N, CoinMined, StartTime);
+            master(sub, WorkerNodeCount, TargetAmountOfCoins, N, CoinMined, StartTime);
         {finished, CoinsFound} ->
             lists:foreach(fun(Entry) -> printEntry(Entry) end, CoinsFound),
             io:format("job done~n", []),
-            master(sub, WorkerNodeCount, AmountOfCoins - length(CoinsFound), N, CoinMined, StartTime)
+            master(sub, WorkerNodeCount, TargetAmountOfCoins, N, CoinMined + length(CoinsFound), StartTime)
     end.
 
 printEntry({Key, Hash}) ->
@@ -55,14 +55,14 @@ printEntry({Key, Hash}) ->
 mine(0, _, Master_Node, CoinsFound) ->
     {master, Master_Node} ! {finished, CoinsFound};
 
-mine(AmountOfCoins, N, Master_Node, CoinsFound) ->
+mine(AmountOfCoinsLeft, N, Master_Node, CoinsFound) ->
     Key = concat("liruiyang;", get_random_string(10)),
     Hash = binary:decode_unsigned(crypto:hash(sha256, Key)),
     case Hash < math:pow(16, 64 - N) of
         true ->
-            mine(AmountOfCoins - 1, N, Master_Node, [{Key, Hash} | CoinsFound]);
+            mine(AmountOfCoinsLeft - 1, N, Master_Node, [{Key, Hash} | CoinsFound]);
         false ->
-            mine(AmountOfCoins, N, Master_Node, CoinsFound)
+            mine(AmountOfCoinsLeft, N, Master_Node, CoinsFound)
     end.
 
 slave(Master_Node) ->
@@ -71,7 +71,8 @@ slave(Master_Node) ->
     receive
         {AmountOfCoins, N} ->
             mine(AmountOfCoins, N, Master_Node, [])
-    end.
+    end,
+    slave(Master_Node).
 
 
 start_slaves(0, _) -> ok;
