@@ -20,6 +20,15 @@ Start an amount of slaves NumberOfSlaves connecting to the boss specified in the
 main:start_slaves(NumberOfSlaves, '<processName>@<nodeName>').
 
 ### Optimal Size of work
+We tested different workload for each worker by giving each worker different number of work at a single time.
+we ran experiment for each combination 50 times.
+number_of_node  work_per_node   ave_total_runtime
+10   1 0.077483   
+10   2  0.071621
+10   5  0.060934
+10  10  0.071773
+As we can see from the above statistics. The optimal number of workload per node per run should be around 5.
+
 
 ### Result for input 4
 (master@Laptop)2> main:start(4). 

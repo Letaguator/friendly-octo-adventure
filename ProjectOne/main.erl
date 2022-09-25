@@ -32,7 +32,7 @@ master(main, WorkerNodeCount, TargetAmountOfCoins, N, CoinMined, StartTime) ->
 
 master(sub, WorkerNodeCount, TargetAmountOfCoins , N, CoinMined, StartTime) ->
     % Here to change amount of work
-    AmountOfWork = 6,
+    AmountOfWork = 20,
     if
         TargetAmountOfCoins =< CoinMined ->
             io:format("Program run time:~fs~n", [now_diff(erlang:timestamp(), StartTime) / 1000000]),
@@ -83,7 +83,7 @@ start_slaves(N, Master_Node) ->
 
 start(NumberOfLeadingZeroesInHash) ->
     %%% Here to change the amount of coin mined by the entire program
-    start_master(40, NumberOfLeadingZeroesInHash).
+    start_master(200, NumberOfLeadingZeroesInHash).
 
 start_perf_analyzer(LastCpuTime, Master_PID) ->
     case is_process_alive(Master_PID) of
@@ -99,5 +99,5 @@ start_perf_analyzer(LastCpuTime, Master_PID) ->
 
 start_master(AmountOfCoins, LeadingZerosForCoin) ->
     % Here to change the amount of worker nodes used:
-    AmountOfWorkerNodes = 5,
+    AmountOfWorkerNodes = 10,
     register(master, spawn(main, master, [main, AmountOfWorkerNodes, AmountOfCoins, LeadingZerosForCoin, 0, erlang:timestamp()])).
