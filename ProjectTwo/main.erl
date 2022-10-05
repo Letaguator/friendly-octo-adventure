@@ -71,9 +71,9 @@ gossip(GridType, Master_Node, Index, Nodes, ActualMessage, RecievedMessageCount)
 adjustToLinearBounds(TargetIndex, Count) ->
     if
         TargetIndex > Count ->
-            1;
+            TargetIndex - Count;
         TargetIndex < 1 ->
-            Count;
+            Count - TargetIndex;
         true ->
             TargetIndex
     end.
@@ -83,7 +83,7 @@ getRandomNeighbour(GridType, Index, Nodes) ->
     case GridType of
         "FullNetwork" ->
             % Currently node can select itself TODO!
-            getRandomNumber(1, length(Nodes));
+            adjustToLinearBounds(Index + getRandomNumber(1, length(Nodes)), NodeCount);
         "Line" ->
             case getRandomNumber(0, 1) of
                 0 ->
