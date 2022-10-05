@@ -51,8 +51,7 @@ boss(NumberOfNodes, GridType, AlgorithmType, Nodes) ->
 bossWaitForFinish(StartTime, NumberOfNodesLeft) ->
     if
         NumberOfNodesLeft == 0 ->
-            io:fwrite("Finished"),
-            io:format("Program run time:~fs~n", [timer:now_diff(erlang:timestamp(), StartTime) / 1000000]);
+            io:format("Finished, Program run time:~fs~n", [timer:now_diff(erlang:timestamp(), StartTime) / 1000000]);
         true ->
             receive
                 {finito} ->
@@ -78,7 +77,7 @@ pushSum(GridType) ->
     io:fwrite("pushSum").
 
 gossip(GridType, Master_Node, Index, Nodes, ActualMessage, RecievedMessageCount) ->
-    TerminationCount = 20,
+    TerminationCount = 10,
     if
         RecievedMessageCount < TerminationCount ->
             receive
@@ -111,7 +110,7 @@ getRandomNeighbour(GridType, Index, Nodes) ->
     NodeCount = length(Nodes),
     case GridType of
         "FullNetwork" ->
-            adjustToLinearBounds(Index + getRandomNumber(1, length(Nodes)), NodeCount);
+            adjustToLinearBounds(Index + getRandomNumber(1, NodeCount), NodeCount);
         "Line" ->
             adjustToLinearBounds(Index + getOneWithRandomSign(), NodeCount);
         "2dGrid" ->
