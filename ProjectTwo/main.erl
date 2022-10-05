@@ -82,7 +82,6 @@ getRandomNeighbour(GridType, Index, Nodes) ->
     NodeCount = length(Nodes),
     case GridType of
         "FullNetwork" ->
-            % Currently node can select itself TODO!
             adjustToLinearBounds(Index + getRandomNumber(1, length(Nodes)), NodeCount);
         "Line" ->
             case getRandomNumber(0, 1) of
