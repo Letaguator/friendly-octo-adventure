@@ -10,7 +10,8 @@ The following values can be tweaked in the code:
  - AmountOfWorkerNodes
 
 Compiling code:
-c(main.erl).
+c(main).
+main:start(5, "FullNetwork", "gossip").
 
 Running boss node with 5 worker nodes (Can be configured in code):
 main:start(4). // params = NumberOfLeadingZeroesInHash
