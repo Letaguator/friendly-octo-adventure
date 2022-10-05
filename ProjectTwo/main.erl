@@ -41,9 +41,15 @@ start(NumberOfNodes, GridType, AlgorithmType) ->
 getRandomNumber(Min, Max) ->
     crypto:rand_uniform(Min, Max + 1).
 
+sendAllRegAcc(CurrentIndex, Nodes, []) -> ok;
+sendAllRegAcc(CurrentIndex, Nodes, [Node | Tail]) ->
+    Node ! {allRegAcc, CurrentIndex, Nodes},
+    sendAllRegAcc(CurrentIndex + 1, Nodes, Tail).
+
 boss(NumberOfNodes, Nodes) ->
     case NumberOfNodes == length(Nodes) of
         true ->
+            sendAllRegAcc(1, Nodes, Nodes),
             io:fwrite("\n"),
             io:write(lists:nth(getRandomNumber(1, length(Nodes)), Nodes)),
             io:fwrite("\n"),
@@ -59,16 +65,22 @@ boss(NumberOfNodes, Nodes) ->
 
 nodeInit(Master_Node) ->
     {master, Master_Node} ! {reg, self()},
-    gossip(Master_Node).
+    receive
+        {allRegAcc, Index, Nodes} ->
+            gossip(Master_Node, Index, Nodes)
+    end.
 
-gossip(Master_Node) ->
+gossip(Master_Node, Index, Nodes) ->
     receive
         {gossip, Message} ->                   
             io:fwrite("Message recieved:"),
             io:fwrite(Message),
             io:fwrite("\n"),
-            nodeInit(Master_Node)
+            gossip(Master_Node, Index, Nodes)   
     end.
+
+% getRandomNeighbour(GridType, Index, Nodes) ->
+%     1;
     
 pushSum() ->
     io:fwrite("pushSum").
