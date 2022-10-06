@@ -91,6 +91,14 @@ gossip(GridType, Master_Node, Index, Nodes, ActualMessage, RecievedMessageCount)
                             ok
                     end,
                     gossip(GridType, Master_Node, Index, Nodes, Message, RecievedMessageCount + 1)
+                after 50 ->
+                    if
+                        RecievedMessageCount > 0 ->
+                            lists:nth(getRandomNeighbour(GridType, Index, Nodes), Nodes) ! {gossip, ActualMessage},
+                            gossip(GridType, Master_Node, Index, Nodes, ActualMessage, RecievedMessageCount);
+                        true ->
+                            gossip(GridType, Master_Node, Index, Nodes, ActualMessage, RecievedMessageCount)
+                    end
             end;
         true ->
             ok
