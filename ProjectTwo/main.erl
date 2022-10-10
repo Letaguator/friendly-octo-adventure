@@ -1,61 +1,19 @@
 % @author Mathias.Brekkan
 
 -module(main).
--export([start/3, start/4, boss/4, nodeInit/1, sendAllRegAcc/5, roundToPerfectSqare/1]).
--import(math, [sqrt/1, pow/2]).
+-export([start/3, boss/4, nodeInit/1, sendAllRegAcc/5]).
 
 % Todo: NumberOfNodes should be rounded to the nearest/easiest case where:
 %       The following is a non-decimal number sqrt(NumberOfNodes) 
-%%% why do we need to do this?
-
-
-
-%%% Round a number N to the earist perfect square
-roundToPerfectSqare(N) ->
-    Sqrt = sqrt(N),
-    if round(Sqrt) == Sqrt ->
-        N;
-    true ->
-        pow(round(Sqrt) + 1, 2)
-    end.
-
-
-
-
-%%% Make sure following is a non-decimal number: sqrt(NumberOfNodes)
 start(NumberOfNodes, GridType, AlgorithmType) ->
-    start(helper, roundToPerfectSqare(NumberOfNodes), GridType, AlgorithmType).
-
-
-start(helper, NumberOfNodes, GridType, AlgorithmType) ->
     Pid = spawn(main, boss, [NumberOfNodes, GridType, AlgorithmType, []]),
     register(master, Pid),
     createNodes(NumberOfNodes, node()).
-
-
-
 
 createNodes(0, _) -> ok;
 createNodes(NumberOfNodesLeft, Master_Node) ->
     spawn(main, nodeInit, [Master_Node]),
     createNodes(NumberOfNodesLeft - 1, Master_Node).
-
-
-nodeInit(Master_Node) ->
-    {master, Master_Node} ! {reg, self()},
-    receive
-        {allRegAcc, Index, GridType, AlgorithmType, Nodes} ->
-            RandomNeighbour = getRandomNeighbour("FullNetwork", Index, Nodes),
-            case AlgorithmType of
-                "Gossip" ->
-                    gossip(GridType, Master_Node, Index, Nodes, "", 0);
-                "PushSum" ->
-                    pushSum(GridType)
-            end
-    end.
-
-
-
 
 getRandomNumber(Min, Max) ->
     crypto:rand_uniform(Min, Max + 1).
@@ -101,7 +59,18 @@ bossWaitForFinish(StartTime, NumberOfNodesLeft) ->
             end
     end.
 
-
+nodeInit(Master_Node) ->
+    {master, Master_Node} ! {reg, self()},
+    receive
+        {allRegAcc, Index, GridType, AlgorithmType, Nodes} ->
+            RandomNeighbour = getRandomNeighbour("FullNetwork", Index, Nodes),
+            case AlgorithmType of
+                "Gossip" ->
+                    gossip(GridType, Master_Node, Index, Nodes, "", 0);
+                "PushSum" ->
+                    pushSum(GridType)
+            end
+    end.
 
 pushSum(GridType) ->
     GridType,
