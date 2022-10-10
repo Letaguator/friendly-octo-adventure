@@ -82,6 +82,7 @@ gossip(GridType, Master_Node, Index, Nodes, ActualMessage, RecievedMessageCount)
         RecievedMessageCount < TerminationCount ->
             receive
                 {gossip, Message} ->
+                    io:format("Node ~p heard the ~p gossip~n", [self(), RecievedMessageCount + 1]),
                     lists:nth(getRandomNeighbour(GridType, Index, Nodes), Nodes) ! {gossip, Message},
                     if
                         RecievedMessageCount == 1 ->
