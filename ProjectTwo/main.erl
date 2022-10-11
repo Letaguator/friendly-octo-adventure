@@ -206,7 +206,6 @@ getRandomNeighbour(GridType, Index, Nodes, RandAccessDimIndex, RandNodeIndex) ->
             GridSectionSize = round(NodeCount/6),
             GridWidth = round(math:sqrt(GridSectionSize)),
             InterpolatedIndex = 6 - floor(Index / GridSectionSize),
-            % InterpolatedIndex = 6 - floor(Index / NodeCount),
             RandNum = getRandomNumber(1, 9),
             if
                 RandNum == 1 ->
