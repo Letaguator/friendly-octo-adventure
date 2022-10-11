@@ -11,9 +11,9 @@ start(NumberOfNodes, GridType, AlgorithmType) ->
     createNodes(NumberOfNodes, node()).
 
 createNodes(0, _) -> ok;
-createNodes(NumberOfNodesLeft, Master_Node) ->
-    spawn(main, nodeInit, [Master_Node]),
-    createNodes(NumberOfNodesLeft - 1, Master_Node).
+createNodes(NumberOfNodesLeft, MasterNode) ->
+    spawn(main, nodeInit, [MasterNode]),
+    createNodes(NumberOfNodesLeft - 1, MasterNode).
 
 getRandomNumber(Min, Max) ->
     crypto:rand_uniform(Min, Max + 1).
@@ -37,8 +37,16 @@ boss(NumberOfNodes, GridType, AlgorithmType, Nodes) ->
             io:fwrite("Registered all nodes\n"),
             sendAllRegAcc(1, Nodes, GridType, AlgorithmType, Nodes),
             StartTime = erlang:timestamp(),
-            lists:nth(getRandomNumber(1, length(Nodes)), Nodes) ! {gossip, "Advanced message"},
-            bossWaitForFinish(StartTime, NumberOfNodes);
+            if
+                AlgorithmType == "Gossip" ->
+                    lists:nth(getRandomNumber(1, length(Nodes)), Nodes) ! {gossip, "Advanced message"},
+                    bossWaitForFinish(gossip, StartTime, NumberOfNodes);
+                AlgorithmType == "PushSum" ->
+                    lists:nth(getRandomNumber(1, length(Nodes)), Nodes) ! {pushSum, 0, 0},
+                    bossWaitForFinish(pushSum, StartTime, Nodes)
+            end;
+
+            
         false ->
             ok
     end,
@@ -48,57 +56,115 @@ boss(NumberOfNodes, GridType, AlgorithmType, Nodes) ->
             boss(NumberOfNodes, GridType, AlgorithmType, [Slave_ID | Nodes])
     end.
 
-bossWaitForFinish(StartTime, NumberOfNodesLeft) ->
+bossWaitForFinish(gossip, StartTime, NumberOfNodesLeft) ->
     if
         NumberOfNodesLeft == 0 ->
             io:format("Finished, Program run time:~fs~n", [timer:now_diff(erlang:timestamp(), StartTime) / 1000000]);
         true ->
             receive
                 {finito} ->
-                    bossWaitForFinish(StartTime, NumberOfNodesLeft - 1)
+                    bossWaitForFinish(gossip, StartTime, NumberOfNodesLeft - 1)
             end
+    end;
+
+
+bossWaitForFinish(pushSum, StartTime, Nodes) ->
+    receive
+        {finito, Sum} ->
+            io:format("The final sum is ~p~n", [Sum]),
+            io:format("Program run time:~fs~n", [timer:now_diff(erlang:timestamp(), StartTime) / 1000000]),
+            terminateAllNodes(Nodes)
     end.
 
-nodeInit(Master_Node) ->
-    {master, Master_Node} ! {reg, self()},
+
+terminateAllNodes([]) ->
+    ok;
+terminateAllNodes(Nodes) ->
+    hd(Nodes) ! {kill},
+    terminateAllNodes(tl(Nodes)).
+
+
+
+nodeInit(MasterNode) ->
+    {master, MasterNode} ! {reg, self()},
     receive
         {allRegAcc, Index, GridType, AlgorithmType, Nodes} ->
             RandomNeighbour = getRandomNeighbour("FullNetwork", Index, Nodes),
             case AlgorithmType of
                 "Gossip" ->
-                    gossip(GridType, Master_Node, Index, Nodes, "", 0);
+                    gossip(GridType, MasterNode, Index, Nodes, "", 0);
                 "PushSum" ->
-                    pushSum(GridType)
+                    pushSum(GridType, MasterNode, Index, Nodes, Index, 1, 0, [])
             end
     end.
 
-pushSum(GridType) ->
-    GridType,
-    io:fwrite("pushSum").
+pushSum(GridType, MasterNode, Index, Nodes, Sum, Weight, RecievedMessageCount, Ratios) ->
+    receive
+        {kill} ->
+            ok;
 
-gossip(GridType, Master_Node, Index, Nodes, ActualMessage, RecievedMessageCount) ->
+
+        {pushSum, AddedSum, AddedWeight} ->
+            NewSum = (Sum + AddedSum) / 2,
+            NewWeight = (Weight + AddedWeight) / 2,
+
+
+
+            case length(Ratios) of 
+                3 ->
+                    io:format("~p, ~p, ~p~n", Ratios),
+                    IsFinished = (lists:nth(2, Ratios) - lists:nth(1, Ratios) < 0.0000000001) and (lists:nth(3, Ratios) - lists:nth(2, Ratios) < 0.0000000001),
+                    if
+                        IsFinished ->
+                            NewRatios = [],
+                            {master, MasterNode} ! {finito, NewSum / NewWeight};
+                        
+                        true ->
+                           NewRatios = [tl(Ratios) | [NewSum / NewWeight]]
+                    end;
+                _Else ->
+                    NewRatios = Ratios ++ [NewSum / NewWeight]
+            end,
+
+
+
+            io:format("Node ~p received ~p and ~p in the ~pth iteration~n", [self(), NewSum * 2, NewWeight * 2, RecievedMessageCount + 1]),
+            lists:nth(getRandomNeighbour(GridType, Index, Nodes), Nodes) ! {pushSum, NewSum, NewWeight},
+            pushSum(GridType, MasterNode, Index, Nodes, NewSum, NewWeight, RecievedMessageCount + 1, NewRatios)
+    end.
+
+            
+    
+gossip(GridType, MasterNode, Index, Nodes, ActualMessage, RecievedMessageCount) ->
     TerminationCount = 10,
     if
         RecievedMessageCount < TerminationCount ->
             receive
                 {gossip, Message} ->
-                    io:format("Node ~p heard the ~p gossip~n", [self(), RecievedMessageCount + 1]),
+                    case RecievedMessageCount + 1 of
+                        1 ->
+                            io:format("Node ~p heard the ~pst gossip~n", [self(), RecievedMessageCount + 1]);
+                        2 ->
+                            io:format("Node ~p heard the ~pnd gossip~n", [self(), RecievedMessageCount + 1]);
+                        _Else ->
+                            io:format("Node ~p heard the ~pth gossip~n", [self(), RecievedMessageCount + 1])
+                    end,
                     lists:nth(getRandomNeighbour(GridType, Index, Nodes), Nodes) ! {gossip, Message},
                     if
                         RecievedMessageCount == 1 ->
                             io:format("Message recieved first time:~p\n", [Message]),
-                            {master, Master_Node} ! {finito};
+                            {master, MasterNode} ! {finito};
                         true ->
                             ok
                     end,
-                    gossip(GridType, Master_Node, Index, Nodes, Message, RecievedMessageCount + 1)
+                    gossip(GridType, MasterNode, Index, Nodes, Message, RecievedMessageCount + 1)
                 after 50 ->
                     if
                         RecievedMessageCount > 0 ->
                             lists:nth(getRandomNeighbour(GridType, Index, Nodes), Nodes) ! {gossip, ActualMessage},
-                            gossip(GridType, Master_Node, Index, Nodes, ActualMessage, RecievedMessageCount);
+                            gossip(GridType, MasterNode, Index, Nodes, ActualMessage, RecievedMessageCount);
                         true ->
-                            gossip(GridType, Master_Node, Index, Nodes, ActualMessage, RecievedMessageCount)
+                            gossip(GridType, MasterNode, Index, Nodes, ActualMessage, RecievedMessageCount)
                     end
             end;
         true ->
@@ -145,4 +211,4 @@ getRandomGridNeighbour(GridWidth, Index) ->
     NewYCoord = adjustToLinearBounds(YCoord + OffsetY, GridWidth),
     round(GridWidth * (NewXCoord - 1) + NewYCoord).
 
-    
+
