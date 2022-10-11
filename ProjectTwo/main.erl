@@ -70,9 +70,8 @@ bossWaitForFinish(gossip, StartTime, NumberOfNodesLeft) ->
 
 bossWaitForFinish(pushSum, StartTime, Nodes) ->
     receive
-        {finito, Sum} ->
-            io:format("The final sum is ~p~n", [Sum]),
-            io:format("Program run time:~fs~n", [timer:now_diff(erlang:timestamp(), StartTime) / 1000000]),
+        {finito} ->
+            io:format("Program run time: ~fs~n", [timer:now_diff(erlang:timestamp(), StartTime) / 1000000]),
             terminateAllNodes(Nodes)
     end.
 
@@ -89,22 +88,35 @@ nodeInit(MasterNode) ->
     {master, MasterNode} ! {reg, self()},
     receive
         {allRegAcc, Index, GridType, AlgorithmType, Nodes} ->
-            RandomNeighbour = getRandomNeighbour("FullNetwork", Index, Nodes),
             case AlgorithmType of
                 "Gossip" ->
                     gossip(GridType, MasterNode, Index, Nodes, "", 0);
                 "PushSum" ->
-                    pushSum(GridType, MasterNode, Index, Nodes, Index, 1, 0, [])
+                    pushSum(GridType, MasterNode, Index, Nodes, Index, 1, 1, [])
             end
     end.
 
-pushSum(GridType, MasterNode, Index, Nodes, Sum, Weight, RecievedMessageCount, Ratios) ->
+pushSum(GridType, MasterNode, Index, Nodes, Sum, Weight, Iteration, Ratios) ->
+    if
+        Iteration == 1 ->
+            io:format("~p recieved assignment first time~n", [self()]),
+            io:format("Initial sum:~p~n", [Sum]),
+            io:format("Initial weight:~p~n", [Weight]);
+        true ->
+            ok
+    end,
+
+
     receive
         {kill} ->
             ok;
 
 
         {pushSum, AddedSum, AddedWeight} ->
+
+
+
+
             NewSum = (Sum + AddedSum) / 2,
             NewWeight = (Weight + AddedWeight) / 2,
 
@@ -113,14 +125,17 @@ pushSum(GridType, MasterNode, Index, Nodes, Sum, Weight, RecievedMessageCount, R
             case length(Ratios) of 
                 3 ->
                     io:format("~p, ~p, ~p~n", Ratios),
-                    IsFinished = (lists:nth(2, Ratios) - lists:nth(1, Ratios) < 0.0000000001) and (lists:nth(3, Ratios) - lists:nth(2, Ratios) < 0.0000000001),
+                    IsFinished = (abs(lists:nth(2, Ratios) - lists:nth(1, Ratios)) < 0.0000000001) and (abs(lists:nth(3, Ratios) - lists:nth(2, Ratios)) < 0.0000000001),
                     if
                         IsFinished ->
+                            io:format("Finished~n"),
+                            io:format("The final sum: ~p~n", [NewSum / NewWeight]),
+                            io:format("Last 3 ratios: ~p, ~p, ~p~n", Ratios),
                             NewRatios = [],
-                            {master, MasterNode} ! {finito, NewSum / NewWeight};
+                            {master, MasterNode} ! {finito};
                         
                         true ->
-                           NewRatios = [tl(Ratios) | [NewSum / NewWeight]]
+                           NewRatios = tl(Ratios) ++ [NewSum / NewWeight]
                     end;
                 _Else ->
                     NewRatios = Ratios ++ [NewSum / NewWeight]
@@ -128,9 +143,9 @@ pushSum(GridType, MasterNode, Index, Nodes, Sum, Weight, RecievedMessageCount, R
 
 
 
-            io:format("Node ~p received ~p and ~p in the ~pth iteration~n", [self(), NewSum * 2, NewWeight * 2, RecievedMessageCount + 1]),
+            io:format("Node ~p received ~p and ~p in the ~pth iteration~n", [self(), NewSum * 2, NewWeight * 2, Iteration]),
             lists:nth(getRandomNeighbour(GridType, Index, Nodes), Nodes) ! {pushSum, NewSum, NewWeight},
-            pushSum(GridType, MasterNode, Index, Nodes, NewSum, NewWeight, RecievedMessageCount + 1, NewRatios)
+            pushSum(GridType, MasterNode, Index, Nodes, NewSum, NewWeight, Iteration + 1, NewRatios)
     end.
 
             
@@ -151,8 +166,7 @@ gossip(GridType, MasterNode, Index, Nodes, ActualMessage, RecievedMessageCount) 
                     end,
                     lists:nth(getRandomNeighbour(GridType, Index, Nodes), Nodes) ! {gossip, Message},
                     if
-                        RecievedMessageCount == 1 ->
-                            io:format("Message recieved first time:~p\n", [Message]),
+                        RecievedMessageCount + 1 == TerminationCount ->
                             {master, MasterNode} ! {finito};
                         true ->
                             ok
