@@ -50,7 +50,7 @@ boss(NumberOfNodes, GridType, AlgorithmType, Nodes) ->
     end,
     receive
         {reg, Slave_ID} -> % Register node
-            io:fwrite("Node registered\n"),
+            % io:fwrite("Node registered\n"),
             boss(NumberOfNodes, GridType, AlgorithmType, [Slave_ID | Nodes])
     end.
 
@@ -153,17 +153,17 @@ gossip(GridType, MasterNode, Index, Nodes, ActualMessage, RecievedMessageCount) 
         RecievedMessageCount < TerminationCount ->
             receive
                 {gossip, Message} ->
-                    case RecievedMessageCount + 1 of
-                        1 ->
-                            io:format("Node ~p heard the ~pst gossip~n", [self(), RecievedMessageCount + 1]);
-                        2 ->
-                            io:format("Node ~p heard the ~pnd gossip~n", [self(), RecievedMessageCount + 1]);
-                        _Else ->
-                            io:format("Node ~p heard the ~pth gossip~n", [self(), RecievedMessageCount + 1])
-                    end,
+                    % case RecievedMessageCount + 1 of
+                    %     1 ->
+                    %         io:format("Node ~p heard the ~pst gossip~n", [self(), RecievedMessageCount + 1]);
+                    %     2 ->
+                    %         io:format("Node ~p heard the ~pnd gossip~n", [self(), RecievedMessageCount + 1]);
+                    %     _Else ->
+                    %         io:format("Node ~p heard the ~pth gossip~n", [self(), RecievedMessageCount + 1])
+                    % end,
                     lists:nth(getRandomNeighbour(GridType, Index, Nodes), Nodes) ! {gossip, Message},
                     if
-                        RecievedMessageCount + 1 == TerminationCount ->
+                        RecievedMessageCount > 0 ->
                             {master, MasterNode} ! {finito};
                         true ->
                             ok
