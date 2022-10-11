@@ -32,14 +32,14 @@ Start an amount of slaves NumberOfSlaves connecting to the boss specified in the
 main:start_slaves(NumberOfSlaves, '<processName>@<nodeName>').
 
 ### What is working
-The code supports FullNetwork, Line, 2dGrid and (Imperfect3dGrid).
+The code supports FullNetwork, Line, 2dGrid and Imperfect3dGrid.
 It can also utilize both the Gossip algorithm and the PushSum algorithm.
 
 ### What is the largest network for each topology and algorithm
 Gossip:
- - FullNetwork: 10,000 nodes - Convergence after 0.333824s
+ - FullNetwork: 30,000 nodes - Convergence after 11.276288s
  - Line: 10,000 nodes - Convergence after 7.440384s
- - 2dGrid: 10,000 nodes - Convergence after 0.259482s
+ - 2dGrid: 30,000 nodes - Convergence after 3.594138s
  - Imperfect3dGrid: 2400 nodes - Convergence after 2.711552s
 
  PushSum:
