@@ -1,7 +1,7 @@
 % @author Mathias.Brekkan
 
 -module(main).
--export([start/3, boss/4, nodeInit/1, sendAllRegAcc/5]).
+-export([start/3, boss/4, nodeInit/1, sendAllRegAcc/6]).
 
 start(NumberOfNodes, GridType, AlgorithmType) ->
     Pid = spawn(main, boss, [NumberOfNodes, GridType, AlgorithmType, []]),
@@ -24,16 +24,18 @@ getOneWithRandomSign() ->
             -1
     end.
 
-sendAllRegAcc(_, _, _, _, []) -> ok;
-sendAllRegAcc(CurrentIndex, Nodes, GridType, AlgorithmType, [Node | Tail]) ->
-    Node ! {allRegAcc, CurrentIndex, GridType, AlgorithmType, Nodes},
-    sendAllRegAcc(CurrentIndex + 1, Nodes, GridType, AlgorithmType, Tail).
+sendAllRegAcc(_, _, _, _, _, []) -> ok;
+sendAllRegAcc(NumberOfNodes, CurrentIndex, Nodes, GridType, AlgorithmType, [Node | Tail]) ->
+    RandAccessDimIndex = getRandomNumber(0, 5),
+    RandNodeIndex = getRandomNumber(1, round(NumberOfNodes/6)),
+    Node ! {allRegAcc, CurrentIndex, GridType, AlgorithmType, Nodes, RandAccessDimIndex, RandNodeIndex},
+    sendAllRegAcc(NumberOfNodes, CurrentIndex + 1, Nodes, GridType, AlgorithmType, Tail).
 
 boss(NumberOfNodes, GridType, AlgorithmType, Nodes) ->
     case NumberOfNodes == length(Nodes) of
         true ->
             io:fwrite("Registered all nodes\n"),
-            sendAllRegAcc(1, Nodes, GridType, AlgorithmType, Nodes),
+            sendAllRegAcc(NumberOfNodes, 1, Nodes, GridType, AlgorithmType, Nodes),
             StartTime = erlang:timestamp(),
             if
                 AlgorithmType == "Gossip" ->
@@ -79,21 +81,19 @@ terminateAllNodes(Nodes) ->
     hd(Nodes) ! {kill},
     terminateAllNodes(tl(Nodes)).
 
-
-
 nodeInit(MasterNode) ->
     {master, MasterNode} ! {reg, self()},
     receive
-        {allRegAcc, Index, GridType, AlgorithmType, Nodes} ->
+        {allRegAcc, Index, GridType, AlgorithmType, Nodes, RandAccessDimIndex, RandNodeIndex} ->
             case AlgorithmType of
                 "Gossip" ->
-                    gossip(GridType, MasterNode, Index, Nodes, "", 0);
+                    gossip(GridType, MasterNode, Index, Nodes, "", 0, RandAccessDimIndex, RandNodeIndex);
                 "PushSum" ->
-                    pushSum(GridType, MasterNode, Index, Nodes, Index, 1, 1, [])
+                    pushSum(GridType, MasterNode, Index, Nodes, Index, 1, 1, [], RandAccessDimIndex, RandNodeIndex)
             end
     end.
 
-pushSum(GridType, MasterNode, Index, Nodes, Sum, Weight, Iteration, Ratios) ->
+pushSum(GridType, MasterNode, Index, Nodes, Sum, Weight, Iteration, Ratios, RandAccessDimIndex, RandNodeIndex) ->
     if
         Iteration == 1 ->
             io:format("~p recieved assignment first time~n", [self()]),
@@ -141,13 +141,13 @@ pushSum(GridType, MasterNode, Index, Nodes, Sum, Weight, Iteration, Ratios) ->
 
 
             io:format("Node ~p received ~p and ~p in the ~pth iteration~n", [self(), NewSum * 2, NewWeight * 2, Iteration]),
-            lists:nth(getRandomNeighbour(GridType, Index, Nodes), Nodes) ! {pushSum, NewSum, NewWeight},
-            pushSum(GridType, MasterNode, Index, Nodes, NewSum, NewWeight, Iteration + 1, NewRatios)
+            lists:nth(getRandomNeighbour(GridType, Index, Nodes, RandAccessDimIndex, RandNodeIndex), Nodes) ! {pushSum, NewSum, NewWeight},
+            pushSum(GridType, MasterNode, Index, Nodes, NewSum, NewWeight, Iteration + 1, NewRatios, RandAccessDimIndex, RandNodeIndex)
     end.
 
             
     
-gossip(GridType, MasterNode, Index, Nodes, ActualMessage, RecievedMessageCount) ->
+gossip(GridType, MasterNode, Index, Nodes, ActualMessage, RecievedMessageCount, RandAccessDimIndex, RandNodeIndex) ->
     TerminationCount = 10,
     if
         RecievedMessageCount < TerminationCount ->
@@ -161,21 +161,21 @@ gossip(GridType, MasterNode, Index, Nodes, ActualMessage, RecievedMessageCount) 
                     %     _Else ->
                     %         io:format("Node ~p heard the ~pth gossip~n", [self(), RecievedMessageCount + 1])
                     % end,
-                    lists:nth(getRandomNeighbour(GridType, Index, Nodes), Nodes) ! {gossip, Message},
+                    lists:nth(getRandomNeighbour(GridType, Index, Nodes, RandAccessDimIndex, RandNodeIndex), Nodes) ! {gossip, Message},
                     if
                         RecievedMessageCount > 0 ->
                             {master, MasterNode} ! {finito};
                         true ->
                             ok
                     end,
-                    gossip(GridType, MasterNode, Index, Nodes, Message, RecievedMessageCount + 1)
+                    gossip(GridType, MasterNode, Index, Nodes, Message, RecievedMessageCount + 1, RandAccessDimIndex, RandNodeIndex)
                 after 50 ->
                     if
                         RecievedMessageCount > 0 ->
-                            lists:nth(getRandomNeighbour(GridType, Index, Nodes), Nodes) ! {gossip, ActualMessage},
-                            gossip(GridType, MasterNode, Index, Nodes, ActualMessage, RecievedMessageCount);
+                            lists:nth(getRandomNeighbour(GridType, Index, Nodes, RandAccessDimIndex, RandNodeIndex), Nodes) ! {gossip, ActualMessage},
+                            gossip(GridType, MasterNode, Index, Nodes, ActualMessage, RecievedMessageCount, RandAccessDimIndex, RandNodeIndex);
                         true ->
-                            gossip(GridType, MasterNode, Index, Nodes, ActualMessage, RecievedMessageCount)
+                            gossip(GridType, MasterNode, Index, Nodes, ActualMessage, RecievedMessageCount, RandAccessDimIndex, RandNodeIndex)
                     end
             end;
         true ->
@@ -192,7 +192,7 @@ adjustToLinearBounds(TargetIndex, Count) ->
             TargetIndex
     end.
 
-getRandomNeighbour(GridType, Index, Nodes) ->
+getRandomNeighbour(GridType, Index, Nodes, RandAccessDimIndex, RandNodeIndex) ->
     NodeCount = length(Nodes),
     case GridType of
         "FullNetwork" ->
@@ -203,13 +203,16 @@ getRandomNeighbour(GridType, Index, Nodes) ->
             GridWidth = round(math:sqrt(NodeCount)),
             getRandomGridNeighbour(GridWidth, Index);
         "Imperfect3dGrid" ->
-            GridWidth = round(math:sqrt(NodeCount)),
-            case getRandomNumber(1, 9) of
-                1 ->
-                    % Random neibour use
-                    ok;
-                2 ->
-                    getRandomGridNeighbour(GridWidth, Index)
+            GridSectionSize = round(NodeCount/6),
+            GridWidth = round(math:sqrt(GridSectionSize)),
+            InterpolatedIndex = 6 - floor(Index / GridSectionSize),
+            % InterpolatedIndex = 6 - floor(Index / NodeCount),
+            RandNum = getRandomNumber(1, 9),
+            if
+                RandNum == 1 ->
+                    RandAccessDimIndex * GridSectionSize + RandNodeIndex;
+                true ->
+                    RandAccessDimIndex * GridSectionSize + getRandomGridNeighbour(GridWidth, InterpolatedIndex)
             end
     end.
 

@@ -40,7 +40,7 @@ Gossip:
  - FullNetwork: 10,000 nodes - Convergence after 0.333824s
  - Line: 10,000 nodes - Convergence after 7.440384s
  - 2dGrid: 10,000 nodes - Convergence after 0.259482s
- - Imperfect3dGrid
+ - Imperfect3dGrid: 2400 nodes - Convergence after 2.711552s
 
  PushSum:
  - FullNetwork
