@@ -17,8 +17,8 @@ First arg is number of nodes.
 Options for network, arg 2:
  - FullNetwork
  - Line 
- - 2dGrid
- - Imperfect2dGrid
+ - 2dGrid, for this argument the number of nodes must be return an integer if square root is taken
+ - Imperfect3dGrid, for this argument the number of nodes must be dividable by 6 then return an integer if square root is taken of that value
 
 Options for algorithm, arg 3:
  - Gossip
@@ -32,5 +32,21 @@ Start an amount of slaves NumberOfSlaves connecting to the boss specified in the
 main:start_slaves(NumberOfSlaves, '<processName>@<nodeName>').
 
 ### What is working
+The code supports FullNetwork, Line, 2dGrid and (Imperfect3dGrid).
+It can also utilize both the Gossip algorithm and the PushSum algorithm.
 
 ### What is the largest network for each topology and algorithm
+Gossip:
+ - FullNetwork
+ - Line 
+ - 2dGrid
+ - Imperfect3dGrid
+
+ PushSum:
+ - FullNetwork
+ - Line 
+ - 2dGrid
+ - Imperfect3dGrid
+
+### Code snippets
+Code snippets can be found in the report

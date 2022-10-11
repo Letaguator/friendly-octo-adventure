@@ -3,8 +3,6 @@
 -module(main).
 -export([start/3, boss/4, nodeInit/1, sendAllRegAcc/5]).
 
-% Todo: NumberOfNodes should be rounded to the nearest/easiest case where:
-%       The following is a non-decimal number sqrt(NumberOfNodes) 
 start(NumberOfNodes, GridType, AlgorithmType) ->
     Pid = spawn(main, boss, [NumberOfNodes, GridType, AlgorithmType, []]),
     register(master, Pid),
@@ -66,7 +64,6 @@ bossWaitForFinish(gossip, StartTime, NumberOfNodesLeft) ->
                     bossWaitForFinish(gossip, StartTime, NumberOfNodesLeft - 1)
             end
     end;
-
 
 bossWaitForFinish(pushSum, StartTime, Nodes) ->
     receive
@@ -205,7 +202,7 @@ getRandomNeighbour(GridType, Index, Nodes) ->
         "2dGrid" ->
             GridWidth = round(math:sqrt(NodeCount)),
             getRandomGridNeighbour(GridWidth, Index);
-        "Imperfect2dGrid" ->
+        "Imperfect3dGrid" ->
             GridWidth = round(math:sqrt(NodeCount)),
             case getRandomNumber(1, 9) of
                 1 ->
