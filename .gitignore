@@ -16,3 +16,4 @@ deps
 _build/
 _checkouts/
 ProjectTwo/tests.erl
+*.zip
