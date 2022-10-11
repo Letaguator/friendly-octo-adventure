@@ -37,9 +37,9 @@ It can also utilize both the Gossip algorithm and the PushSum algorithm.
 
 ### What is the largest network for each topology and algorithm
 Gossip:
- - FullNetwork
- - Line 
- - 2dGrid
+ - FullNetwork: 10,000 nodes - Convergence after 0.333824s
+ - Line: 10,000 nodes - Convergence after 7.440384s
+ - 2dGrid: 10,000 nodes - Convergence after 0.259482s
  - Imperfect3dGrid
 
  PushSum:
