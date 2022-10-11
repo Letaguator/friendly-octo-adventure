@@ -1,4 +1,4 @@
-% @author Mathias.Brekkan
+% @author Mathias.Brekkan and ruiyang
 
 -module(main).
 -export([start/3, boss/4, nodeInit/1, sendAllRegAcc/6]).
