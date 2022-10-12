@@ -17,3 +17,4 @@ _build/
 _checkouts/
 ProjectTwo/tests.erl
 *.zip
+ProjectTwo/results
