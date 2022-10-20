@@ -1,28 +1,63 @@
 % @author Mathias.Brekkan and ruiyang
 
 -module(main).
--export([start/2, boss/3, sendAllRegAcc/5]).
+-export([start/2, boss/4, sendAllRegAcc/6]).
 
 start(NumberOfNodes, NumberOfRequests) ->
-    Pid = spawn(main, boss, [NumberOfNodes, NumberOfRequests]),
+    Pid = spawn(main, boss, [NumberOfNodes, NumberOfRequests, [], {}]),
     register(master, Pid),
     createNodes(NumberOfNodes, node()).
 
 getRandomNumber(Min, Max) ->
     crypto:rand_uniform(Min, Max + 1).
 
+getRandomString(Length) ->
+    AllowedChars = "abcdefghijklmnopqrstuvwxyz1234567890",
+    MaxLength = length(AllowedChars),
+    lists:foldl(
+        fun(_, Acc) -> [lists:nth(crypto:rand_uniform(1, MaxLength), AllowedChars)] ++ Acc end,
+        [], lists:seq(1, Length)
+    ).
+
 getHash(Value) ->
     crypto:sha1(Value).
+
+adjustToLinearBounds(TargetIndex, Count) ->
+    if
+        TargetIndex > Count ->
+            TargetIndex - Count;
+        TargetIndex < 1 ->
+            Count + TargetIndex;
+        true ->
+            TargetIndex
+    end.
 
 createNodes(0, _) -> ok;
 createNodes(NumberOfNodesLeft, MasterNode) ->
     spawn(main, nodeInit, [MasterNode]),
     createNodes(NumberOfNodesLeft - 1, MasterNode).
 
-sendAllRegAcc(_, _, _, _, []) -> ok;
-sendAllRegAcc(NumberOfNodes, CurrentIndex, Nodes, NumberOfRequests, [Node | Tail]) ->
-    Node ! {allRegAcc, CurrentIndex, NumberOfRequests, Nodes},
-    sendAllRegAcc(NumberOfNodes, CurrentIndex + 1, Nodes, NumberOfRequests, Tail).
+nodeInit(MasterNode) ->
+    Id = getRandomString(8),
+    Hid = getHash(Id),
+    {master, MasterNode} ! {reg, self(), Hid},
+    receive
+        {allRegAcc, FingerList, NumberOfRequests} ->
+            A = 1
+    end.
+
+buildFingerList(_, _, _, _, 0, FingerList) ->
+    FingerList;
+buildFingerList(CurrentIndex, NumberOfNodes, NodesSortedByHid, FingerTableSize, RemainingEntries, FingerList) ->
+    NextNodeInListIndex = CurrentIndex + math:pow(FingerTableSize - RemainingEntries, 2),
+    NextNodeInList = list:nth(NodesSortedByHid, adjustToLinearBounds(NextNodeInListIndex, NumberOfNodes)),
+    buildFingerList(CurrentIndex, NumberOfNodes, NodesSortedByHid, FingerTableSize, RemainingEntries - 1, [NextNodeInList | FingerList]).
+
+sendAllRegAcc(_, _, _, _, _, []) -> ok;
+sendAllRegAcc(FingerTableSize, NumberOfNodes, CurrentIndex, NodesSortedByHid, NumberOfRequests, [Entry | Tail]) ->
+    FingerList = buildFingerList(CurrentIndex + 1, NumberOfNodes, NodesSortedByHid, FingerTableSize, FingerTableSize, []),
+    element(2, Entry) ! {allRegAcc, FingerList, NumberOfRequests},
+    sendAllRegAcc(FingerTableSize, NumberOfNodes, CurrentIndex + 1, NodesSortedByHid, NumberOfRequests, Tail).
 
 bossWaitForFinish(NumberOfNodesLeft) ->
     if
@@ -35,16 +70,19 @@ bossWaitForFinish(NumberOfNodesLeft) ->
             end
     end.
 
-boss(NumberOfNodes, NumberOfRequests, Nodes) ->
+boss(NumberOfNodes, NumberOfRequests, Nodes, NodesMap) ->
     case NumberOfNodes == length(Nodes) of
         true ->
-            sendAllRegAcc(NumberOfNodes, 1, Nodes, NumberOfRequests, Nodes),
+            FingerTableSize = round(math:log2(NumberOfNodes)),
+            NodesSortedByHid = lists:keysort(1, maps:to_list(NodesMap)),
+            sendAllRegAcc(FingerTableSize, NumberOfNodes, 1, NodesSortedByHid, NumberOfRequests, NodesSortedByHid),
             bossWaitForFinish(NumberOfNodes);
             % Boss print average number of hops
         false ->
             ok
     end,
     receive
-        {reg, Slave_ID} -> % Register node
-            boss(NumberOfNodes, NumberOfRequests, [Slave_ID | Nodes])
+        {reg, Slave_ID, Hid} -> % Register node
+            UpdatedNodesMap = maps:put(Hid, Slave_ID, NodesMap),
+            boss(NumberOfNodes, NumberOfRequests, Nodes, UpdatedNodesMap)
     end.
