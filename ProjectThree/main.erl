@@ -24,12 +24,22 @@ sendAllRegAcc(NumberOfNodes, CurrentIndex, Nodes, NumberOfRequests, [Node | Tail
     Node ! {allRegAcc, CurrentIndex, NumberOfRequests, Nodes},
     sendAllRegAcc(NumberOfNodes, CurrentIndex + 1, Nodes, NumberOfRequests, Tail).
 
+bossWaitForFinish(NumberOfNodesLeft) ->
+    if
+        NumberOfNodesLeft == 0 ->
+            io:format("Finished running program...");
+        true ->
+            receive
+                {finito} -> % Node completed all required requests
+                    bossWaitForFinish(NumberOfNodesLeft - 1)
+            end
+    end.
+
 boss(NumberOfNodes, NumberOfRequests, Nodes) ->
     case NumberOfNodes == length(Nodes) of
         true ->
             sendAllRegAcc(NumberOfNodes, 1, Nodes, NumberOfRequests, Nodes),
-            StartTime = erlang:timestamp();
-            % Boss wait to finish
+            bossWaitForFinish(NumberOfNodes);
             % Boss print average number of hops
         false ->
             ok
