@@ -115,15 +115,8 @@ pushSum(GridType, MasterNode, Index, Nodes, Sum, Weight, Iteration, Ratios, Rand
 
 
         {pushSum, AddedSum, AddedWeight} ->
-
-
-
-
             NewSum = (Sum + AddedSum) / 2,
             NewWeight = (Weight + AddedWeight) / 2,
-
-
-
             case length(Ratios) of 
                 3 ->
                     IsFinished = (abs(lists:nth(2, Ratios) - lists:nth(1, Ratios)) < 0.0000000001) and (abs(lists:nth(3, Ratios) - lists:nth(2, Ratios)) < 0.0000000001),
@@ -142,8 +135,13 @@ pushSum(GridType, MasterNode, Index, Nodes, Sum, Weight, Iteration, Ratios, Rand
             end,
 
 
-
-            lists:nth(getRandomNeighbour(GridType, Index, Nodes, RandAccessDimIndex, RandNodeIndex), Nodes) ! {pushSum, NewSum, NewWeight},
+            Failed = (crypto:rand_uniform(1, 4) rem 4) == 0,
+            if
+                Failed ->
+                    ok;
+                true ->
+                    lists:nth(getRandomNeighbour(GridType, Index, Nodes, RandAccessDimIndex, RandNodeIndex), Nodes) ! {pushSum, NewSum, NewWeight}
+            end,
             pushSum(GridType, MasterNode, Index, Nodes, NewSum, NewWeight, Iteration + 1, NewRatios, RandAccessDimIndex, RandNodeIndex)
     end.
 
@@ -155,8 +153,14 @@ gossip(GridType, MasterNode, Index, Nodes, ActualMessage, RecievedMessageCount, 
         RecievedMessageCount < TerminationCount ->
             receive
                 {gossip, Message} ->
-
-                    lists:nth(getRandomNeighbour(GridType, Index, Nodes, RandAccessDimIndex, RandNodeIndex), Nodes) ! {gossip, Message},
+                    Failed = (crypto:rand_uniform(1, 4) rem 4) == 0,
+                    if
+                        Failed ->
+                            ok;
+                        true ->
+                            lists:nth(getRandomNeighbour(GridType, Index, Nodes, RandAccessDimIndex, RandNodeIndex), Nodes) ! {gossip, Message}
+                    end,
+                    
                     if
                         RecievedMessageCount > 0 ->
                             {master, MasterNode} ! {finito};
@@ -176,6 +180,8 @@ gossip(GridType, MasterNode, Index, Nodes, ActualMessage, RecievedMessageCount, 
         true ->
             ok
     end.
+
+
 
 adjustToLinearBounds(TargetIndex, Count) ->
     if
