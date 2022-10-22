@@ -1,6 +1,13 @@
 -module(methods).
 -export([getRandomNumber/2, getRandomString/1, getHash/1, adjustToLinearBounds/2, getM/0]).
 
+
+
+
+%%% I suggest we should use records to keep track of keys and nodes
+-record(node, {id, pid}). 
+-record(key, {id, key}).
+
 getRandomNumber(Min, Max) ->
     crypto:rand_uniform(Min, Max + 1).
 
@@ -12,7 +19,7 @@ getRandomString(Length) ->
         [], lists:seq(1, Length)
     ).
 
-
+%%% This function makes M a global variable
 getM() ->
     16.
 
