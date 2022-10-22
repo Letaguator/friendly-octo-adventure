@@ -6,9 +6,12 @@ Ruiyang Li
 ### Compilation & Running
 
 Compiling code:
-c(main).
-    or
-c(main, [debug_info]).
+- c(methods).
+- c(main). or c(main, [debug_info]).
+
+Running:
+start(NumberOfNodes, NumberOfRequests)
+start(4, 5).
 
 ### What is working
 

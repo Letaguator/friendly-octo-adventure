@@ -3,10 +3,9 @@
 
 
 
-
 %%% I suggest we should use records to keep track of keys and nodes
--record(node, {id, pid}). 
--record(key, {id, key}).
+% -record(node, {id, pid}). 
+% -record(key, {id, key}).
 
 getRandomNumber(Min, Max) ->
     crypto:rand_uniform(Min, Max + 1).
@@ -23,9 +22,9 @@ getRandomString(Length) ->
 getM() ->
     16.
 
-
 getHash(Key) ->
-    binary:decode_unsigned(crypto:hash(sha, Key)) rem round(math:pow(2, getM())).
+    HashedValue = crypto:hash(sha, Key),
+    binary:decode_unsigned(HashedValue) rem round(math:pow(2, getM())).
 
 adjustToLinearBounds(TargetIndex, Count) ->
     if
