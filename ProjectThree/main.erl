@@ -3,6 +3,8 @@
 -module(main).
 -export([start/2, master/4, sendAllRegAcc/6]).
 -import(methods, [getRandomNumber/2, getRandomString/1, getHash/1, adjustToLinearBounds/2, operate/5, getM/0]).
+-include("records.hrl"). 
+
 
 start(NumberOfNodes, NumberOfRequests) ->
     M = math:ceil(log2(NumberOfNodes * NumberOfRequests * 2)),
