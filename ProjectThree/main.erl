@@ -1,4 +1,4 @@
-% @author Mathias.Brekkan and ruiyang
+% @author Mathias.Brekkan and Ruiyang Li
 
 -module(main).
 -export([start/2, master/4, sendAllRegAcc/6]).
@@ -19,13 +19,12 @@ createNodes(NumberOfNodesLeft, MasterNode) ->
 
 
 %%% node API
-%%% after creation, node process send out its PID and identifier {reg, PID, identifier}
-%%% waits for the master to send back the finger list, the number of requests the PID and the identifier of the predecessor and the Successor
+%%% after creation, node process send itself out as a node record
+%%% it then waits for the master to send back the finger list, the number of requests and the Successor as a node record 
 node(MasterNode) ->
     %%% in the paper the ip address is the key so I changed the name
-    NodeKey = getRandomString(8),
-    NodeId = getHash(NodeKey),
-    {master, MasterNode} ! {reg, self(), NodeId},
+    Node = #node{id = getHash(getRandomString(8)), pid = self()},
+    {master, MasterNode} ! {reg, Node},
 
     %%% in erlang, receive, if, and case block export variables created in them
     %%% We just need to make sure all branches have the variable that will be called
@@ -33,47 +32,58 @@ node(MasterNode) ->
     %%% if a variable is not called afterwards, we dont need to keep it safe
 
     receive
-        {allRegAcc, FingerList, NumberOfRequests, Predecessor, Successor} ->
-            operate(NodeId, FingerList, NumberOfRequests, Predecessor, Successor)
-    end,
+        {allRegAcc, FingerList, NumberOfRequests, Successor} ->
+            operate(Node, FingerList, NumberOfRequests, Successor)
+    end.
     
 
 
-findSuccessor(NodeId, FingerList, Predecessor, Successor) ->
+findSuccessor(Key, Node, FingerList, Successor, WhoAsked, NumHops) ->
     if 
-        ((KeyId > NodeId) and (KeyId < Successor#node.id) ->
-            Successor;
+        (Key#key.id > Node#node.id) and (Key#key.id < Successor#node.id) ->
+           WhoAsked#node.pid ! {found, Key, Successor, NumHops + 1};
         true ->
-            closestPrecedingNode(KeyId).
-
-closestPrecedingNode(KeyId, FingerList, ) ->
-
-
+            ClosestPrecedingNode = closestPrecedingNode(Key, Node, FingerList, getM()),
+            ClosestPrecedingNode#node.pid ! {Key, WhoAsked}
+        end.
 
 
+closestPrecedingNode(_, Node, _, 0, WhoAsked) ->
+    Node;
+closestPrecedingNode(Key, Node, FingerList, I, WhoAsked) ->
+    if
+        (List:nth(FingerList, I) > Node#node.id) and (List:nth(FingerList, I) < Key#key.id) ->
+            WhoAsked#node.pid ! {found, Key, List:nth(FingerList, I), NumHops};
+        true ->
+            closestPrecedingNode(Key, Node, FingerList, I - 1)
+    end.
 
-operate(NodeId, FingerList, NumberOfRequestLeft, Predecessor, Successor) ->
+
+
+
+operate(Node, FingerList, NumberOfRequestLeft, Successor) ->
     receive
-        {findSuccessor, KeyId, WhoAsked} -> 
+        {findSuccessor, Key, WhoAsked} -> 
 
-            Res = findSuccessor(NodeId, FingerList, Predecessor, Successor),
-            WhoAsked ! {KeyId, Successor, NumHops}
+            findSuccessor(Key, Node, FingerList, Successor, WhoAsked, NumHops);
 
-        {found, KeyId, FoundWhere, NumHops} ->
+        {found, Key, FoundWhere, NumHops} ->
             io:format("Node: ~p~n", [self()]),
-            io:format("Key: ~p~n", [KeyId]),
-            io:format("Hash: ~p~n" [Hash]),
-            io:format("Found at:~p~n", [FoundWhere]),
+            io:format("Key: ~p~n", [Key#key.key]),
+            io:format("Key identifier: ~p~n", [Key#key.id]),
+            io:format("Found at node: ~p~n", [FoundWhere#node.pid]),
+            io:format("Which as identifier: ~p~n", [FoundWhere#node.id]),
             io:format("Hops: ~p~n", [NumHops]),
             {master, MasterNode} ! {finito}
         after 1000 ->
             if
                 NumberOfRequestsLeft > 0 ->
-                    NewId = getHash(getRandomString(8)) rem math:pow(2, M),
-                    lookUp(NewId, self()),
+                    NewKey = getRandomString(8),
+                    NewId = getHash(NewKey) rem math:pow(2, M),
+                    NewKey = #key{id = NewId, key = NewKey},
+                    findSuccessor(NewKey, Node, FingerList, Successor, Node, 0),
                     operate(NumberOfRequestLeft)
             end
-        end
     end.
 
 
@@ -90,27 +100,28 @@ buildFingerList(CurrentIndex, NumberOfNodes, NodesSortedByHid, FingerTableSize, 
     NextNodeInList = list:nth(NodesSortedByHid, adjustToLinearBounds(NextNodeInListIndex, NumberOfNodes)),
     buildFingerList(CurrentIndex, NumberOfNodes, NodesSortedByHid, FingerTableSize, RemainingEntries - 1, [NextNodeInList | FingerList]).
 
+
+
 sendAllRegAcc(_, _, _, _, _, []) -> ok;
 sendAllRegAcc(FingerTableSize, NumberOfNodes, CurrentIndex, NodesSortedByHid, NumberOfRequests, [Entry | Tail]) ->
-    FingerList = buildFingerList(CurrentIndex + 1, NumberOfNodes, NodesSortedByHid, FingerTableSize, FingerTableSize, []),
-    Predecessor = list:nth(NodesSortedByHid, adjustToLinearBounds(CurrentIndex - 1, NumberOfNodes)),
+    FingerList = buildFingerList(CurrentIndex + 1, NumberOfNodes, NodesSortedByHid, FingerTableSize, FingerTableSize, []), = list:nth(NodesSortedByHid, adjustToLinearBounds(CurrentIndex - 1, NumberOfNodes)),
     Successor = list:nth(NodesSortedByHid, adjustToLinearBounds(CurrentIndex + 1, NumberOfNodes)),
     %%% PID of the node
-    element(2, Entry) ! {allRegAcc, FingerList, NumberOfRequests, Predecessor, Successor},
+    element(2, Entry) ! {allRegAcc, FingerList, NumberOfRequests, Successor},
         {create, NumberOfRequests} ->
-            Predecessor = nil,
+     = nil,
             SuccessorNode = node(),
-            nodeLoop(Hid, MasterNode, NumberOfRequests, Predecessor, {});
+            nodeLoop(Hid, MasterNode, NumberOfRequests, {});
         {join, Node, NumberOfRequests} ->
-            Predecessor = nil,
+     = nil,
             Node ! {findSuccessor, Hid, node()},
             receive
                 {foundSuccessor, SuccessorNode} ->
-                    nodeLoop(Hid, MasterNode, NumberOfRequests, Predecessor, {})
+                    nodeLoop(Hid, MasterNode, NumberOfRequests, {})
             end;
     end.
 
-nodeLoop(Hid, MasterNode, NumberOfRequests, Predecessor, FingerTable) ->
+nodeLoop(Hid, MasterNode, NumberOfRequests, FingerTable) ->
     receive
         {findSuccessor, Hid, NodeAddress} ->
             if()
