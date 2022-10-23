@@ -1,33 +1,58 @@
 % @author Mathias Brekkan and Ruiyang Li
 
 -module(main).
--export([start/2, master/4, sendAllRegAcc/5, operate/5, nodeInit/1]).
+-export([start/2, master/4, sendAllRegAcc/5, operate/5, nodeInit/2, join/1]).
 -import(methods, [getRandomNumber/2, getRandomString/1, getHash/1, adjustToLinearBounds/2, getM/0]).
+-import(test, [printList/1]).
 -include("records.hrl"). 
 
+
+
+
+
 start(NumberOfNodes, NumberOfRequests) ->
-    M = math:ceil(math:log2(NumberOfNodes * NumberOfRequests * 2)),
-    Pid = spawn(main, master, [NumberOfNodes, NumberOfRequests, M, []]),
+    %%% M = math:ceil(math:log2(NumberOfNodes * NumberOfRequests * 2)),
+    Pid = spawn(main, master, [NumberOfNodes, NumberOfRequests, getM(), []]),
     register(master, Pid),
-    createNodes(NumberOfNodes, master).
+    createFirstNode(master).
 
 master(NumberOfNodes, NumberOfRequests, M, Nodes) ->
-    case NumberOfNodes == length(Nodes) of
-        true ->
-            io:fwrite("Master\n"),
-            % FingerTableSize = round(math:log2(NumberOfNodes)),
-            % NodesSortedByHid = lists:keysort(1, maps:to_list(NodesMap)),
-            sendAllRegAcc(NumberOfNodes, 1, NumberOfRequests, Nodes, Nodes),
-            masterWaitForFinish(NumberOfNodes);
-            % Boss print average number of hops
-        false ->
-            ok
-    end,
+    io:fwrite("Master\n"),
+    % NodesSortedByHid = lists:keysort(1, maps:to_list(NodesMap)),
+    
+    %%% sendAllRegAcc(NumberOfNodes, 1, NumberOfRequests, Nodes, Nodes),
+    %%% masterWaitForFinish(NumberOfNodes);
+    % Boss print average number of hops
     receive
-        {reg, Node} -> % Register node
-            io:fwrite("Reg node\n"),
-            master(NumberOfNodes, NumberOfRequests, M, [Node | Nodes])
+        {create, Node} -> % Register node
+            io:format("Master reg node:\n"),
+            io:format("~w~n", [Node]), 
+            io:format("Current Nodes:~n"),
+            UpdatedNodes = [Node | Nodes],
+            printList(UpdatedNodes),
+            Node#node.pid ! {create, NumberOfRequests},
+            master(NumberOfNodes, NumberOfRequests, M, UpdatedNodes);
+        {join, Node} ->
+            io:format("Master: reg node:\n"),
+            io:format("~w~n", [Node]), 
+            io:format("Current Nodes:~n"),
+            UpdatedNodes = [Node | Nodes],
+            printList(UpdatedNodes),
+            Node#node.pid ! {join, NumberOfRequests},
+            master(NumberOfNodes, NumberOfRequests, M, UpdatedNodes)
+            
     end.
+
+
+createFirstNode(Master) ->
+    io:format("Creating the first node~n"),
+    spawn(main, nodeInit, [Master, true]).
+
+
+join(Master) ->
+    spawn(main, nodeInit, [Master, false]).
+
+
 
 sendAllRegAcc(_, _, _, _, []) -> ok;
 sendAllRegAcc(NumberOfNodes, CurrentIndex, NumberOfRequests, Nodes, [Entry | Tail]) ->
@@ -56,34 +81,29 @@ createNodes(NumberOfNodesLeft, MasterNode) ->
     spawn(main, nodeInit, [MasterNode]),
     createNodes(NumberOfNodesLeft - 1, MasterNode).
 
-%%% node API
-%%% after creation, node process send itself out as a node record
-%%% it then waits for the master to send back the finger list, the number of requests and the Successor as a node record 
-nodeInit(MasterNode) ->
-    %%% in the paper the ip address is the key so I changed the name
+
+
+nodeInit(MasterNode, IsFirstNode) ->
     RandomName = getRandomString(8),
-    Node = #node{id = getHash(RandomName), pid = self()},
-    NodeKey = #key{id=Node#node.id, key=RandomName},
+    Node = #node{id = getHash(RandomName), pid = self(), key = RandomName},
     io:fwrite("Node init with ID: ~p~n", [Node#node.id]),
-    master ! {reg, Node},
-
-    %%% in erlang, receive, if, and case block export variables created in them
-    %%% We just need to make sure all branches have the variable that will be called
-    %%% outside of the block
-    %%% if a variable is not called afterwards, we dont need to keep it safe
-
+    case IsFirstNode of
+        true ->
+            master ! {create, Node};
+        false ->        
+            master ! {join, Node}
+    end,
+    
     receive
         {create, NumberOfRequests} ->
-            io:fwrite("Create\n"),
             Predecessor = nil,
-            SuccessorNode = self(),
-            FingerList = [Node],
+            FingerList = lists:duplicate(getM(), Node),
             operate(MasterNode, NumberOfRequests, Node, Predecessor, FingerList);
         {join, KnownNode, NumberOfRequests} ->
             io:fwrite("Join\n"),
             io:write(self()),
             Predecessor = nil,
-            KnownNode#node.pid ! {findSuccessor, NodeKey, Node},
+            KnownNode#node.pid ! {findSuccessor, Node#node.key, Node},
             receive
                 {found, Key, FoundWhere, NumHops} ->
                     io:fwrite("Found successor\n"),
@@ -91,8 +111,13 @@ nodeInit(MasterNode) ->
             end
     end.
 
+
+
+
+
 operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, FingerList) ->
-    % TODO:
+    io:format("Node is online:~n"),
+    io:format("~w~n", [Node]),
     Successor = lists:nth(1, FingerList),
     NumHops = 1,
     receive
@@ -125,6 +150,7 @@ operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, FingerList) ->
 stabilize(Node, Successor) ->
     % Get s
     ok.
+
 
 notify() ->
     ok.

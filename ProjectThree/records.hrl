@@ -3,5 +3,5 @@
 
 
 %%% I suggest we should use records to keep track of keys and nodes
--record(node, {id, pid}). 
+-record(node, {id, pid, key}). 
 -record(key, {id, key}).

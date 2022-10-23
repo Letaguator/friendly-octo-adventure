@@ -9,8 +9,7 @@
 
 
 printList(List) ->
-    List,
-    ok.
+     io:fwrite("~w~n",[List]).
 
 
 
@@ -18,5 +17,8 @@ printList(List) ->
 
 testHash(Key) ->
     io:format("~p", [getHash(Key)]).
+
+
+
 
 
