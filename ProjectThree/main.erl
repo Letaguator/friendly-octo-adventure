@@ -88,7 +88,7 @@ nodeInit(MasterNode, IsFirstNode) ->
     receive
 
         {create, NumberOfRequests} ->
-            Predecessor = nil,
+            Predecessor = Node,
             Successor = Node,
             FingerList = lists:duplicate(getM(), Node),
             io:format("Node is online:~n"),
@@ -113,6 +113,14 @@ nodeInit(MasterNode, IsFirstNode) ->
 
 operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, Successor, FingerList) ->
     receive
+        {whatsYourPredecessor, WhoAsked} ->
+
+            WhoAsked#node.pid ! {predecessor, Predecessor},
+
+            operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, Successor, FingerList);
+        {whatsYourSuccessor, WhoAsked} ->
+            WhoAsked#node.pid ! {successor, Successor},
+            operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, Successor, FingerList);
         {findSuccessor, Key, WhoAsked} -> 
             io:fwrite("Node:\n"),
             io:fwrite("~w~n", [self()]),
@@ -147,12 +155,15 @@ operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, Successor, FingerLi
             end;
         
         {changePredecessor, NewPredecessor} ->
+            io:format("Node notified changePredecessor:~n"),
+            io:format("~w~n", [Node]),
+            io:format("to ~w~n~n", [NewPredecessor]),
             operate(MasterNode, NumberOfRequestsLeft, Node, NewPredecessor, Successor, FingerList)
         
         after 1000 ->
             io:format("Node run stablize:~n"),
-            io:format("~w~n", [self()]),
-            NewSuccessor = stabilize(Node, Successor),
+            io:format("~w~n", [Node]),
+            NewSuccessor = stabilize(Node, Successor, Predecessor),
             NewSuccessor#node.pid ! {notify, Node},
             operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, NewSuccessor, FingerList)
         %     if
@@ -170,19 +181,35 @@ operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, Successor, FingerLi
 
 
 
-stabilize(Self, Successor) ->
-    Successor#node.pid ! {whatsYourPredecessor},
-    CircleSize = getCircleSize(),
-    receive
-        {HisPredecessor} ->
-            if
-                (Successor#node.id < Self#node.id) and (HisPredecessor#node.id > Self#node.id) and (HisPredecessor#node.id < CircleSize) ->
-                    HisPredecessor;
-                
-                (HisPredecessor#node.id > Self#node.id) and (HisPredecessor#node.id < Successor#node.id) ->
-                    HisPredecessor;
+stabilize(Self, Successor, Predecessor) ->
 
-                true ->
+    if
+        Self == Successor ->
+            Predecessor;
+        true ->
+            Successor#node.pid ! {whatsYourPredecessor, Self},
+            CircleSize = getCircleSize(),
+            receive
+                {predecessor, SuccessorPecessor} ->
+                    io:format("11111111111111111111"),
+                    if
+                        (Successor#node.id =< Self#node.id) and (SuccessorPecessor#node.id > Self#node.id) and (SuccessorPecessor#node.id < CircleSize) ->
+                            io:format("New Node detected:~n"),
+                            io:format("by ~w~n", [Self]),
+                            io:format("of ~w~n", [SuccessorPecessor]),
+                            SuccessorPecessor;
+                        
+                        (SuccessorPecessor#node.id > Self#node.id) and (SuccessorPecessor#node.id < Successor#node.id) ->
+                            io:format("New Node detected:~n"),
+                            io:format("by ~w~n", [Self]),
+                            io:format("of ~w~n", [SuccessorPecessor]),
+                            SuccessorPecessor;
+
+                        true ->
+                            Successor
+                    end
+                after 50 ->
+                    io:format("Time out~n"),
                     Successor
             end
     end.
@@ -198,7 +225,7 @@ findSuccessor(Key, Node, FingerList, Successor, WhoAsked, NumHops) ->
     CircleSize = getCircleSize(),
     if
         (Node#node.id == Successor#node.id) ->
-            io:fwrite("Goal\n"),
+            io:fwrite("Goal case1\n"),
             WhoAsked#node.pid ! {found, Key, Successor, NumHops};
         
         
@@ -210,9 +237,11 @@ findSuccessor(Key, Node, FingerList, Successor, WhoAsked, NumHops) ->
         %%% goal! 
         
         (Node#node.id > Successor#node.id) and ((Key#key.id > Node#node.id) and (Key#key.id =< CircleSize)) ->
+            io:fwrite("Goal case2\n"),
             WhoAsked#node.pid ! {found, Key, Successor, NumHops};
 
         (Key#key.id > Node#node.id) and (Key#key.id =< Successor#node.id) ->
+            io:fwrite("Goal case3\n"),
             %%% io:fwrite("Goal\n"),
             WhoAsked#node.pid ! {found, Key, Successor, NumHops};
 
