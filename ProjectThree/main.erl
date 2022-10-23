@@ -50,9 +50,9 @@ master(NumberOfNodes, NumberOfRequests, M, Nodes) ->
             %%% find a random existing node in the network to initiate join
             Node#node.pid ! {join, lists:nth(getRandomNumber(1, length(Nodes)), Nodes), NumberOfRequests},
             master(NumberOfNodes, NumberOfRequests, M, UpdatedNodes)
-    end,
+    end.
     % Tell nodes to start sending nodes
-    masterWaitForFinish(TotalNumberOfNodes, NumberOfRequests, NumberOfHopsSoFar, NumberOfNodesLeft).
+    % masterWaitForFinish(TotalNumberOfNodes, NumberOfRequests, NumberOfHopsSoFar, NumberOfNodesLeft).
 
 
 createFirstNode(Master) ->
