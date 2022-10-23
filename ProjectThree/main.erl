@@ -31,7 +31,7 @@ master(NumberOfNodes, NumberOfRequests, M, Nodes) ->
     % NodesSortedByHid = lists:keysort(1, maps:to_list(NodesMap)),
     
     %%% sendAllRegAcc(NumberOfNodes, 1, NumberOfRequests, Nodes, Nodes),
-    %%% masterWaitForFinish(NumberOfNodes);
+    %%% masterWaitForFinish(TotalNumberOfNodes, NumberOfRequests, NumberOfHopsSoFar, NumberOfNodesLeft);
     % Boss print average number of hops
     receive
         {create, Node} -> % Register node
@@ -63,14 +63,15 @@ join(Master) ->
     spawn(main, nodeInit, [Master, false]).
 
 
-masterWaitForFinish(NumberOfNodesLeft) ->
+masterWaitForFinish(TotalNumberOfNodes, NumberOfRequests, NumberOfHopsSoFar, NumberOfNodesLeft) ->
     if
         NumberOfNodesLeft == 0 ->
+            io:format("Average hops: ~w~n", [NumberOfHopsSoFar/(TotalNumberOfNodes * NumberOfRequests)]),
             io:format("Finished running program...");
         true ->
             receive
-                {finito} -> % Node completed all required requests
-                    masterWaitForFinish(NumberOfNodesLeft - 1)
+                {finito, NewNumberOfHops} -> % Node completed all required requests
+                    masterWaitForFinish(TotalNumberOfNodes, NumberOfRequests, NumberOfHopsSoFar + NewNumberOfHops, NumberOfNodesLeft - 1)
             end
     end.
 
