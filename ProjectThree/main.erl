@@ -36,7 +36,7 @@ sendAllRegAcc(NumberOfNodes, CurrentIndex, NumberOfRequests, Nodes, [Entry | Tai
             Entry#node.pid ! {create, NumberOfRequests};
         true ->
             TargetNode = lists:nth(1, Nodes),
-            Entry#node.pid ! {join, TargetNode}
+            Entry#node.pid ! {join, TargetNode, NumberOfRequests}
     end,
     sendAllRegAcc(NumberOfNodes, CurrentIndex + 1, NumberOfRequests, Nodes, Tail).
 
@@ -60,10 +60,11 @@ createNodes(NumberOfNodesLeft, MasterNode) ->
 %%% after creation, node process send itself out as a node record
 %%% it then waits for the master to send back the finger list, the number of requests and the Successor as a node record 
 nodeInit(MasterNode) ->
-    io:fwrite("Node init\n"),
     %%% in the paper the ip address is the key so I changed the name
     RandomName = getRandomString(8),
     Node = #node{id = getHash(RandomName), pid = self()},
+    NodeKey = #key{id=Node#node.id, key=RandomName},
+    io:fwrite("Node init with ID: ~p~n", [Node#node.id]),
     master ! {reg, Node},
 
     %%% in erlang, receive, if, and case block export variables created in them
@@ -75,26 +76,30 @@ nodeInit(MasterNode) ->
         {create, NumberOfRequests} ->
             io:fwrite("Create\n"),
             Predecessor = nil,
-            SuccessorNode = node(),
+            SuccessorNode = self(),
             FingerList = [Node],
             operate(MasterNode, NumberOfRequests, Node, Predecessor, FingerList);
-        {join, Node, NumberOfRequests} ->
+        {join, KnownNode, NumberOfRequests} ->
             io:fwrite("Join\n"),
+            io:write(self()),
             Predecessor = nil,
-            Node ! {findSuccessor, Node#node.id, node()},
+            KnownNode#node.pid ! {findSuccessor, NodeKey, Node},
             receive
-                {foundSuccessor, SuccessorNode} ->
-                    operate(MasterNode, NumberOfRequests, Node, Predecessor, [])
+                {found, Key, FoundWhere, NumHops} ->
+                    io:fwrite("Found successor\n"),
+                    operate(MasterNode, NumberOfRequests, Node, Predecessor, [FoundWhere])
             end
     end.
 
 operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, FingerList) ->
     % TODO:
-    Successor = nil,
-    NumHops = 5,
+    Successor = lists:nth(1, FingerList),
+    NumHops = 1,
     receive
         {findSuccessor, Key, WhoAsked} -> 
-            findSuccessor(Key, Node, FingerList, Successor, WhoAsked, NumHops);
+            io:fwrite("Starting successor lookup\n"),
+            findSuccessor(Key, Node, FingerList, Successor, WhoAsked, NumHops),
+            operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, FingerList);
         {found, Key, FoundWhere, NumHops} ->
             io:format("Node: ~p~n", [self()]),
             io:format("Key: ~p~n", [Key#key.key]),
@@ -103,28 +108,47 @@ operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, FingerList) ->
             io:format("Which as identifier: ~p~n", [FoundWhere#node.id]),
             io:format("Hops: ~p~n", [NumHops]),
             operate(MasterNode, NumberOfRequestsLeft - 1, Node, Predecessor, FingerList)
-        after 1000 ->
-            if
-                NumberOfRequestsLeft > 0 ->
-                    RandomKeyValue = getRandomString(8),
-                    HashedKey = getHash(RandomKeyValue),
-                    NewId = HashedKey rem round(math:pow(2, getM())),
-                    NewKey = #key{id = NewId, key = RandomKeyValue},
-                    findSuccessor(NewKey, Node, FingerList, Successor, Node, 0),
-                    operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, FingerList);
-                true ->
-                    master ! {finito}
-            end
+        % after 1000 ->
+        %     if
+        %         NumberOfRequestsLeft > 0 ->
+        %             RandomKeyValue = getRandomString(8),
+        %             HashedKey = getHash(RandomKeyValue),
+        %             NewId = HashedKey rem round(math:pow(2, getM())),
+        %             NewKey = #key{id = NewId, key = RandomKeyValue},
+        %             findSuccessor(NewKey, Node, FingerList, Successor, Node, 0),
+        %             operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, FingerList);
+        %         true ->
+        %             master ! {finito}
+        %     end
     end.
 
+stabilize(Node, Successor) ->
+    % Get s
+    ok;
+
+notify() ->
+
+
 findSuccessor(Key, Node, FingerList, Successor, WhoAsked, NumHops) ->
-    if 
-        (Key#key.id > Node#node.id) and (Key#key.id < Successor#node.id) ->
-           WhoAsked#node.pid ! {found, Key, Successor, NumHops + 1};
+    io:fwrite("Test\n"),
+    io:write(Key#key.id),
+    io:fwrite(" - "),
+    io:write(Node#node.id),
+    io:fwrite("\n"),
+    if
+        (Node#node.id == Successor#node.id) ->
+            io:fwrite("Goal\n"),
+            WhoAsked#node.pid ! {found, Key, Successor, NumHops};
+
+        % TODO: What if successor is first node?
+        (Key#key.id > Node#node.id) and (Key#key.id =< Successor#node.id) ->
+            io:fwrite("Goal\n"),
+            WhoAsked#node.pid ! {found, Key, Successor, NumHops};
         true ->
+            io:fwrite("True case\n"),
             % TODO: replace 1 with something
             ClosestPrecedingNode = closestPrecedingNode(Key, Node, FingerList, 1, WhoAsked),
-            ClosestPrecedingNode#node.pid ! {Key, WhoAsked}
+            ClosestPrecedingNode#node.pid ! {findSuccessor, Key, WhoAsked, NumHops + 1}
     end.
 
 closestPrecedingNode(_, Node, _, 0, WhoAsked) ->
