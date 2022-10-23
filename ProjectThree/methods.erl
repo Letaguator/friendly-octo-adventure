@@ -3,9 +3,14 @@
 
 
 
+<<<<<<< Updated upstream
 %%% I suggest we should use records to keep track of keys and nodes
 % -record(node, {id, pid}). 
 % -record(key, {id, key}).
+=======
+
+
+>>>>>>> Stashed changes
 
 getRandomNumber(Min, Max) ->
     crypto:rand_uniform(Min, Max + 1).
