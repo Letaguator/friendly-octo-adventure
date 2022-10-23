@@ -31,7 +31,6 @@ master(NumberOfNodes, NumberOfRequests, M, Nodes) ->
     % NodesSortedByHid = lists:keysort(1, maps:to_list(NodesMap)),
     
     %%% sendAllRegAcc(NumberOfNodes, 1, NumberOfRequests, Nodes, Nodes),
-    %%% masterWaitForFinish(TotalNumberOfNodes, NumberOfRequests, NumberOfHopsSoFar, NumberOfNodesLeft);
     % Boss print average number of hops
     receive
         {create, Node} -> % Register node
@@ -51,7 +50,9 @@ master(NumberOfNodes, NumberOfRequests, M, Nodes) ->
             %%% find a random existing node in the network to initiate join
             Node#node.pid ! {join, lists:nth(getRandomNumber(1, length(Nodes)), Nodes), NumberOfRequests},
             master(NumberOfNodes, NumberOfRequests, M, UpdatedNodes)
-    end.
+    end,
+    % Tell nodes to start sending nodes
+    masterWaitForFinish(TotalNumberOfNodes, NumberOfRequests, NumberOfHopsSoFar, NumberOfNodesLeft).
 
 
 createFirstNode(Master) ->

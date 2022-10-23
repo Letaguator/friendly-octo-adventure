@@ -11,7 +11,7 @@ Compiling code:
 - c(main). or c(main, [debug_info]).
 
 Running:
-start(NumberOfNodes, NumberOfRequests).
+start(NumberOfNodes, NumberOfRequests, master).
 join(Name of the current running node *when you use -sname).
 
 ### What is working
