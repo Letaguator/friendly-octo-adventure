@@ -57,7 +57,7 @@ master(NumberOfNodes, NumberOfRequests, M, Nodes) ->
 sendAllRequestsStart(_, _, []) -> ok;
 sendAllRequestsStart(NumberOfNodes, CurrentIndex, [Node | Tail]) ->
     Node ! {startSendingRequests},
-    sendAllRegAcc(NumberOfNodes, CurrentIndex + 1, Tail).
+    sendAllRequestsStart(NumberOfNodes, CurrentIndex + 1, Tail).
 
 createFirstNode(Master) ->
     io:format("Creating the first node~n"),
