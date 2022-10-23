@@ -124,10 +124,10 @@ operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, FingerList) ->
 
 stabilize(Node, Successor) ->
     % Get s
-    ok;
+    ok.
 
 notify() ->
-
+    ok.
 
 findSuccessor(Key, Node, FingerList, Successor, WhoAsked, NumHops) ->
     io:fwrite("Test\n"),
