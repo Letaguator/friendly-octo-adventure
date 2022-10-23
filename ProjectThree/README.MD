@@ -10,8 +10,8 @@ Compiling code:
 - c(main). or c(main, [debug_info]).
 
 Running:
-start(NumberOfNodes, NumberOfRequests)
-start(4, 5).
+start(NumberOfNodes, NumberOfRequests).
+join(Name of the current running node *when you use -sname).
 
 ### What is working
 
