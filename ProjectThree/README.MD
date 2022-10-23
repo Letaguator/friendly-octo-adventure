@@ -7,6 +7,7 @@ Ruiyang Li
 
 Compiling code:
 - c(methods).
+- c(test).
 - c(main). or c(main, [debug_info]).
 
 Running:
