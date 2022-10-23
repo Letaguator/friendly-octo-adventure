@@ -1,12 +1,23 @@
 % @author Mathias Brekkan and Ruiyang Li
 
 -module(main).
--export([start/2, master/4, operate/6, nodeInit/2, join/1]).
+-export([start/3, start/2, master/4, operate/6, nodeInit/2, join/1, createNodes/2]).
 -import(methods, [getRandomNumber/2, getRandomString/1, getHash/1, adjustToLinearBounds/2, getM/0, getCircleSize/0]).
 -import(test, [printList/1]).
 -include("records.hrl"). 
 
 
+
+start(NumberOfNodes, NumberOfRequests, Master) ->
+    start(NumberOfNodes, NumberOfRequests),
+    createNodes(NumberOfNodes, Master).
+
+
+createNodes(0, _) ->
+    io:format("All nodes are created~n");
+createNodes(NumberOfNodes, Master) ->
+    join(Master),
+    createNodes(NumberOfNodes - 1, Master).
 
 
 
@@ -40,7 +51,6 @@ master(NumberOfNodes, NumberOfRequests, M, Nodes) ->
             %%% find a random existing node in the network to initiate join
             Node#node.pid ! {join, lists:nth(getRandomNumber(1, length(Nodes)), Nodes), NumberOfRequests},
             master(NumberOfNodes, NumberOfRequests, M, UpdatedNodes)
-            
     end.
 
 
@@ -157,6 +167,8 @@ operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, Successor, FingerLi
         %             master ! {finito}
         %     end
     end.
+
+
 
 stabilize(Self, Successor) ->
     Successor#node.pid ! {whatsYourPredecessor},
