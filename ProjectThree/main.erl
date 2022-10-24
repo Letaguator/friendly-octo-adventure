@@ -104,7 +104,7 @@ nodeInit(MasterNode, IsFirstNode) ->
             Predecessor = nil,
             KnownNode#node.pid ! {findSuccessor, Node#node.key, Node},
             receive
-                {found, Key, FoundWhere, NumHops} ->
+                {found, Key, FoundWhere, NumHops} -> % NumHops must be ignored in this case
                     io:format("Node is online:~n"),
                     io:format("~w~n", [Node]),
                     %%% node_p needs to notify node_s that it needs to change predecessor
