@@ -203,7 +203,6 @@ fixFinger(FingerList, Self, KnownNode, M, I, NewList) ->
     KnownNode#node.pid ! {findSuccessor, Key, Self},
     receive
         {found, Key, Successor, NumHops} ->
-            
             fixFinger(FingerList, Self, KnownNode, M, I + 1, [Successor | NewList])
         after 100 ->
             io:format("Fix Finger time out~n"),
@@ -282,7 +281,6 @@ findSuccessor(Key, Node, FingerList, Successor, WhoAsked, NumHops) ->
     end.
 
 closestPrecedingNode(_, Node, _, 0, WhoAsked) ->
-    io:format("fffffffffffffffffffff"),
     Node;
 
 %%% TODO: we need to change this so that all the finger list opperations can handle successor being 1
@@ -292,8 +290,6 @@ closestPrecedingNode(Key, Node, FingerList, I, WhoAsked) ->
     io:format("LENGHT OF FINGERLIST ~w~n", [length(FingerList)]),
     FingerListElement = lists:nth(I, FingerList),
     if
-        (FingerListElement#node.id < Node#node.id) and (FingerListElement#node.id < Key#key.id) ->
-            FingerListElement;
         (FingerListElement#node.id > Node#node.id) and (FingerListElement#node.id < Key#key.id) ->
             %%% NumHops = 1, % TODO: Fix
             %%% we only found the closest one not the final answer
