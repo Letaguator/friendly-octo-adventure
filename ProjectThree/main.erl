@@ -1,7 +1,7 @@
 % @author Mathias Brekkan and Ruiyang Li
 
 -module(main).
--export([start/3, start/2, master/4, operate/7, nodeInit/2, join/1, createNodes/2]).
+-export([start/3, start/2, master/4, operate/8, nodeInit/2, join/1, createNodes/2]).
 -import(methods, [getRandomNumber/2, getRandomString/1, getHash/1, adjustToLinearBounds/2, getM/0, getCircleSize/0]).
 -import(test, [printList/1]).
 -include("records.hrl"). 
@@ -99,7 +99,7 @@ nodeInit(MasterNode, IsFirstNode) ->
             FingerList = lists:duplicate(getM(), Node),
             io:format("Node is online:~n"),
             io:format("~w~n", [Node]),
-            operate(MasterNode, NumberOfRequests, Node, Predecessor, Successor, FingerList, false);
+            operate(MasterNode, NumberOfRequests, Node, Predecessor, Successor, FingerList, false, 0);
         {join, KnownNode, NumberOfRequests} ->
             Predecessor = nil,
             KnownNode#node.pid ! {findSuccessor, Node#node.key, Node},
@@ -109,32 +109,29 @@ nodeInit(MasterNode, IsFirstNode) ->
                     io:format("~w~n", [Node]),
                     %%% node_p needs to notify node_s that it needs to change predecessor
                     FoundWhere#node.pid ! {changePredecessor, Node},
-                    operate(MasterNode, NumberOfRequests, Node, Predecessor, FoundWhere, [FoundWhere], false)
+                    operate(MasterNode, NumberOfRequests, Node, Predecessor, FoundWhere, [FoundWhere], false, 0)
             end
     end.
 
 
-
-
-
-operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, Successor, FingerList, CanSendRequests) ->
+operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, Successor, FingerList, CanSendRequests, TotalNumHops) ->
     receive
         {startSendingRequests} ->
-            operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, Successor, FingerList, true);
+            operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, Successor, FingerList, true, TotalNumHops);
         {whatsYourPredecessor, WhoAsked} ->
             WhoAsked#node.pid ! {predecessor, Predecessor},
-            operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, Successor, FingerList, CanSendRequests);
+            operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, Successor, FingerList, CanSendRequests, TotalNumHops);
         {whatsYourSuccessor, WhoAsked} ->
             WhoAsked#node.pid ! {successor, Successor},
-            operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, Successor, FingerList, CanSendRequests);
+            operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, Successor, FingerList, CanSendRequests, TotalNumHops);
         {findSuccessor, Key, WhoAsked} -> 
             io:fwrite("Node:\n"),
             io:fwrite("~w~n", [self()]),
             io:fwrite("receieved findSuccessor request from:\n"),
             io:fwrite("~w~n", [WhoAsked]),
-            NumHops = 420,
+            NumHops = 1,
             findSuccessor(Key, Node, FingerList, Successor, WhoAsked, NumHops),
-            operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, Successor, FingerList, CanSendRequests);
+            operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, Successor, FingerList, CanSendRequests, TotalNumHops);
 
 
 
@@ -145,7 +142,7 @@ operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, Successor, FingerLi
             io:format("Found at node: ~p~n", [FoundWhere#node.pid]),
             io:format("Which as identifier: ~p~n", [FoundWhere#node.id]),
             io:format("Hops: ~p~n", [NumHops]),
-            operate(MasterNode, NumberOfRequestsLeft - 1, Node, Predecessor, Successor, FingerList, CanSendRequests);
+            operate(MasterNode, NumberOfRequestsLeft - 1, Node, Predecessor, Successor, FingerList, CanSendRequests, TotalNumHops + NumHops);
 
         {notify, NewPredecessor} ->
             io:format("Node:~n"),
@@ -155,23 +152,23 @@ operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, Successor, FingerLi
             
             if
                 (Predecessor == nil) or ((NewPredecessor#node.id > Node#node.id) and (NewPredecessor#node.id < Predecessor#node.id)) ->
-                    operate(MasterNode, NumberOfRequestsLeft - 1, Node, NewPredecessor, Successor, FingerList, CanSendRequests);
+                    operate(MasterNode, NumberOfRequestsLeft - 1, Node, NewPredecessor, Successor, FingerList, CanSendRequests, TotalNumHops);
                 true ->
-                    operate(MasterNode, NumberOfRequestsLeft - 1, Node, Predecessor, Successor, FingerList, CanSendRequests)
+                    operate(MasterNode, NumberOfRequestsLeft - 1, Node, Predecessor, Successor, FingerList, CanSendRequests, TotalNumHops)
             end;
         
         {changePredecessor, NewPredecessor} ->
             io:format("Node notified changePredecessor:~n"),
             io:format("~w~n", [Node]),
             io:format("to ~w~n~n", [NewPredecessor]),
-            operate(MasterNode, NumberOfRequestsLeft, Node, NewPredecessor, Successor, FingerList, CanSendRequests)
+            operate(MasterNode, NumberOfRequestsLeft, Node, NewPredecessor, Successor, FingerList, CanSendRequests, TotalNumHops)
 
         after 1000 ->
             io:format("Node run stablize:~n"),
             io:format("~w~n", [Node]),
             NewSuccessor = stabilize(Node, Successor, Predecessor),
             NewSuccessor#node.pid ! {notify, Node},
-            operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, NewSuccessor, FingerList, CanSendRequests),
+            operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, NewSuccessor, FingerList, CanSendRequests, TotalNumHops),
             if
                 CanSendRequests and NumberOfRequestsLeft > 0 ->
                     RandomKeyValue = getRandomString(8),
@@ -179,9 +176,9 @@ operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, Successor, FingerLi
                     NewId = HashedKey rem round(math:pow(2, getM())),
                     NewKey = #key{id = NewId, key = RandomKeyValue},
                     findSuccessor(NewKey, Node, FingerList, Successor, Node, 0),
-                    operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, NewSuccessor, FingerList, CanSendRequests);
+                    operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, NewSuccessor, FingerList, CanSendRequests, TotalNumHops);
                 CanSendRequests == false ->
-                    operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, NewSuccessor, FingerList, CanSendRequests);
+                    operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, NewSuccessor, FingerList, CanSendRequests, TotalNumHops);
                 true ->
                     master ! {finito}
             end
@@ -190,7 +187,6 @@ operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, Successor, FingerLi
 
 
 stabilize(Self, Successor, Predecessor) ->
-
     if
         Self == Successor ->
             Predecessor;
