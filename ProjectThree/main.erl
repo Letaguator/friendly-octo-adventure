@@ -198,27 +198,13 @@ operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, Successor, FingerLi
 fixFinger(_, _, _, M, M, NewList) ->
     lists:reverse(NewList);
 fixFinger(FingerList, Self, KnownNode, M, I, NewList) ->
-    
+    io:format("00000000000000000000000000000000000---->~w~n", [I]),
     Key = #key{id = Self#node.id + math:pow(2, I), key = nil},
 
     KnownNode#node.pid ! {findSuccessor, Key, Self},
-
-    %io:format("VVVVVVVVVVVVV~n"),
-    %io:write(Self),
-    %io:write(KnownNode#node.pid),
-    %io:format("~n^^^^^^^^^^^^^^^^~n"),
     receive
-%        {findSuccessor, Key, WhoAsked} -> 
-%            io:fwrite("Node:\n"),
-%            io:fwrite("~w~n", [self()]),
-%            io:fwrite("receieved findSuccessor request from:\n"),
-%            io:fwrite("~w~n", [WhoAsked]),
-%            NumHops = 1,
-%            findSuccessor(Key, Node, FingerList, Successor, WhoAsked, NumHops)
-
         {found, Key, Successor, NumHops} ->
 
-            %io:format("00000000000000000000000000000"),
             fixFinger(FingerList, Self, KnownNode, M, I + 1, [Successor | NewList])
         after 50 ->
             io:format("Fix Finger time out~n"),
@@ -235,7 +221,6 @@ stabilize(Self, Successor, Predecessor) ->
             CircleSize = getCircleSize(),
             receive
                 {predecessor, SuccessorPecessor} ->
-                    io:format("11111111111111111111"),
                     if
                         (Successor#node.id =< Self#node.id) and (SuccessorPecessor#node.id > Self#node.id) and (SuccessorPecessor#node.id < CircleSize) ->
                             io:format("New Node detected:~n"),
@@ -302,7 +287,7 @@ closestPrecedingNode(_, Node, _, 0, WhoAsked) ->
 
 %%% TODO: we need to change this so that all the finger list opperations can handle successor being 1
 closestPrecedingNode(Key, Node, FingerList, I, WhoAsked) ->
-    io:format("LENGHT OF FINGERLIST~w~n", [length(FingerList)]),
+    %io:format("LENGHT OF FINGERLIST ~w~n", [length(FingerList)]),
     FingerListElement = lists:nth(I, FingerList),
     if
         (FingerListElement#node.id > Node#node.id) and (FingerListElement#node.id < Key#key.id) ->
