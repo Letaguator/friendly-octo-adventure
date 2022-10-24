@@ -168,7 +168,16 @@ operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, Successor, FingerLi
             io:format("~w~n", [Node]),
             NewSuccessor = stabilize(Node, Successor, Predecessor),
             NewSuccessor#node.pid ! {notify, Node},
-            operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, NewSuccessor, FingerList, CanSendRequests, TotalNumHops),
+            
+
+            io:format("Node run Fix Finger~n"),
+            if 
+                Node == Successor ->
+                    NewFingerList = FingerList;
+                true ->
+                    NewFingerList = fixFinger(Node, Successor, getM(), 0, [])
+            end,
+
             if
                 CanSendRequests and NumberOfRequestsLeft > 0 ->
                     RandomKeyValue = getRandomString(8),
@@ -176,13 +185,33 @@ operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, Successor, FingerLi
                     NewId = HashedKey rem round(math:pow(2, getM())),
                     NewKey = #key{id = NewId, key = RandomKeyValue},
                     findSuccessor(NewKey, Node, FingerList, Successor, Node, 0),
-                    operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, NewSuccessor, FingerList, CanSendRequests, TotalNumHops);
+                    operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, NewSuccessor, NewFingerList, CanSendRequests, TotalNumHops);
                 CanSendRequests == false ->
-                    operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, NewSuccessor, FingerList, CanSendRequests, TotalNumHops);
+                    operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, NewSuccessor, NewFingerList, CanSendRequests, TotalNumHops);
                 true ->
                     master ! {finito}
             end
     end.
+
+
+fixFinger(_, _, M, M, NewList) ->
+    NewList;
+fixFinger(Self, KnownNode, M, I, NewList) ->
+    Key = #key{id = Self#node.id + math:pow(2, I), key = nil},
+
+    KnownNode#node.pid ! {findSuccessor, Key, Self, 0},
+
+    io:format("1111111111111111111~n"),
+    receive
+        {found, Key, Successor, NumHops} ->
+            io:format("1111111111111111111~n"),
+            fixFinger(Self, KnownNode, M, I + 1, [NewList | Successor])
+        after 50 ->
+            io:format("Fix Finger time out~n"),
+            NewList
+    end.
+
+
 
 
 
