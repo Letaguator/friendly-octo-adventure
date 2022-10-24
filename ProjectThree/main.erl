@@ -103,6 +103,7 @@ nodeInit(MasterNode, IsFirstNode) ->
         {join, KnownNode, NumberOfRequests} ->
             Predecessor = nil,
             KnownNode#node.pid ! {findSuccessor, Node#node.key, Node},
+            FingerList = lists:duplicate(getM(), KnownNode),
             receive
                 {found, Key, FoundWhere, NumHops} -> % NumHops must be ignored in this case
                     io:format("Node is online:~n"),
@@ -175,7 +176,7 @@ operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, Successor, FingerLi
                 Node == Successor ->
                     NewFingerList = FingerList;
                 true ->
-                    NewFingerList = fixFinger(Node, Successor, getM(), 0, [])
+                    NewFingerList = fixFinger(FingerList, Node, Successor, getM(), 0, [])
             end,
 
             if
@@ -194,21 +195,34 @@ operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, Successor, FingerLi
     end.
 
 
-fixFinger(_, _, M, M, NewList) ->
+fixFinger(_, _, _, M, M, NewList) ->
     NewList;
-fixFinger(Self, KnownNode, M, I, NewList) ->
+fixFinger(FingerList, Self, KnownNode, M, I, NewList) ->
+    
     Key = #key{id = Self#node.id + math:pow(2, I), key = nil},
 
-    KnownNode#node.pid ! {findSuccessor, Key, Self, 0},
+    KnownNode#node.pid ! {findSuccessor, Key, Self},
 
-    io:format("1111111111111111111~n"),
+    %io:format("VVVVVVVVVVVVV~n"),
+    %io:write(Self),
+    %io:write(KnownNode#node.pid),
+    %io:format("~n^^^^^^^^^^^^^^^^~n"),
     receive
+%        {findSuccessor, Key, WhoAsked} -> 
+%            io:fwrite("Node:\n"),
+%            io:fwrite("~w~n", [self()]),
+%            io:fwrite("receieved findSuccessor request from:\n"),
+%            io:fwrite("~w~n", [WhoAsked]),
+%            NumHops = 1,
+%            findSuccessor(Key, Node, FingerList, Successor, WhoAsked, NumHops)
+
         {found, Key, Successor, NumHops} ->
-            io:format("1111111111111111111~n"),
-            fixFinger(Self, KnownNode, M, I + 1, [NewList | Successor])
+
+            %io:format("00000000000000000000000000000"),
+            fixFinger(FingerList, Self, KnownNode, M, I + 1, [Successor | NewList])
         after 50 ->
             io:format("Fix Finger time out~n"),
-            NewList
+            FingerList
     end.
 
 
@@ -291,6 +305,7 @@ closestPrecedingNode(_, Node, _, 0, WhoAsked) ->
 
 %%% TODO: we need to change this so that all the finger list opperations can handle successor being 1
 closestPrecedingNode(Key, Node, FingerList, I, WhoAsked) ->
+    io:format("LENGHT OF FINGERLIST~w~n", [length(FingerList)]),
     FingerListElement = lists:nth(I, FingerList),
     if
         (FingerListElement#node.id > Node#node.id) and (FingerListElement#node.id < Key#key.id) ->
