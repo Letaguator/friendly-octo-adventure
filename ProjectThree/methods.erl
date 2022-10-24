@@ -18,6 +18,8 @@ getM() ->
     16.
 
 
+
+
 getCircleSize() ->
     round(math:pow(2, getM())).
 

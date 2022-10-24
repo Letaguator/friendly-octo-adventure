@@ -198,15 +198,14 @@ operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, Successor, FingerLi
 fixFinger(_, _, _, M, M, NewList) ->
     lists:reverse(NewList);
 fixFinger(FingerList, Self, KnownNode, M, I, NewList) ->
-    io:format("00000000000000000000000000000000000---->~w~n", [I]),
     Key = #key{id = Self#node.id + math:pow(2, I), key = nil},
 
     KnownNode#node.pid ! {findSuccessor, Key, Self},
     receive
         {found, Key, Successor, NumHops} ->
-
+            
             fixFinger(FingerList, Self, KnownNode, M, I + 1, [Successor | NewList])
-        after 50 ->
+        after 100 ->
             io:format("Fix Finger time out~n"),
             FingerList
     end.
@@ -279,17 +278,22 @@ findSuccessor(Key, Node, FingerList, Successor, WhoAsked, NumHops) ->
             %%% io:fwrite("True case\n"),
             % TODO: replace 1 with something
             ClosestPrecedingNode = closestPrecedingNode(Key, Node, FingerList, getM(), WhoAsked),
-            ClosestPrecedingNode#node.pid ! {findSuccessor, Key, WhoAsked, NumHops + 1}
+            ClosestPrecedingNode#node.pid ! {findSuccessor, Key, WhoAsked}
     end.
 
 closestPrecedingNode(_, Node, _, 0, WhoAsked) ->
+    io:format("fffffffffffffffffffff"),
     Node;
 
 %%% TODO: we need to change this so that all the finger list opperations can handle successor being 1
 closestPrecedingNode(Key, Node, FingerList, I, WhoAsked) ->
-    %io:format("LENGHT OF FINGERLIST ~w~n", [length(FingerList)]),
+
+
+    io:format("LENGHT OF FINGERLIST ~w~n", [length(FingerList)]),
     FingerListElement = lists:nth(I, FingerList),
     if
+        (FingerListElement#node.id < Node#node.id) and (FingerListElement#node.id < Key#key.id) ->
+            FingerListElement;
         (FingerListElement#node.id > Node#node.id) and (FingerListElement#node.id < Key#key.id) ->
             %%% NumHops = 1, % TODO: Fix
             %%% we only found the closest one not the final answer
