@@ -185,7 +185,7 @@ operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, Successor, FingerLi
                     HashedKey = getHash(RandomKeyValue),
                     NewId = HashedKey rem round(math:pow(2, getM())),
                     NewKey = #key{id = NewId, key = RandomKeyValue},
-                    findSuccessor(NewKey, Node, FingerList, Successor, Node, 0),
+                    findSuccessor(NewKey, Node, NewFingerList, Successor, Node, 0),
                     operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, NewSuccessor, NewFingerList, CanSendRequests, TotalNumHops);
                 CanSendRequests == false ->
                     operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, NewSuccessor, NewFingerList, CanSendRequests, TotalNumHops);
@@ -224,9 +224,6 @@ fixFinger(FingerList, Self, KnownNode, M, I, NewList) ->
             io:format("Fix Finger time out~n"),
             FingerList
     end.
-
-
-
 
 
 stabilize(Self, Successor, Predecessor) ->
@@ -315,13 +312,3 @@ closestPrecedingNode(Key, Node, FingerList, I, WhoAsked) ->
         true ->
             closestPrecedingNode(Key, Node, FingerList, I - 1, WhoAsked)
     end.
-
-
-
-
-buildFingerList(_, _, _, _, 0, FingerList) ->
-    FingerList;
-buildFingerList(CurrentIndex, NumberOfNodes, NodesSortedByHid, FingerTableSize, RemainingEntries, FingerList) ->
-    NextNodeInListIndex = CurrentIndex + math:pow(2, FingerTableSize - RemainingEntries),
-    NextNodeInList = list:nth(NodesSortedByHid, adjustToLinearBounds(NextNodeInListIndex, NumberOfNodes)),
-    buildFingerList(CurrentIndex, NumberOfNodes, NodesSortedByHid, FingerTableSize, RemainingEntries - 1, [NextNodeInList | FingerList]).
