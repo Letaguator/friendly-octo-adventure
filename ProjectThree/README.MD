@@ -9,9 +9,10 @@ Compiling code:
 - c(methods).
 - c(test).
 - c(main). or c(main, [debug_info]).
+- c(methods), c(test), c(main).
 
 Running:
-start(NumberOfNodes, NumberOfRequests, master).
+main:start(NumberOfNodes, NumberOfRequests, master).
 join(Name of the current running node *when you use -sname).
 
 ### What is working

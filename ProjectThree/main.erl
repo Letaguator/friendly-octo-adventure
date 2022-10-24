@@ -196,7 +196,7 @@ operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, Successor, FingerLi
 
 
 fixFinger(_, _, _, M, M, NewList) ->
-    NewList;
+    lists:reverse(NewList);
 fixFinger(FingerList, Self, KnownNode, M, I, NewList) ->
     
     Key = #key{id = Self#node.id + math:pow(2, I), key = nil},
