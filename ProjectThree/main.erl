@@ -19,6 +19,10 @@ createNodes(NumberOfNodes, Master) ->
     join(Master),
     createNodes(NumberOfNodes - 1, Master).
 
+
+join(Master) ->
+    spawn(main, nodeInit, [Master, false]).
+
 start(NumberOfNodes, NumberOfRequests) ->
     Pid = spawn(main, master, [NumberOfNodes, NumberOfRequests, getM(), [], NumberOfNodes]),
     register(master, Pid),
@@ -60,11 +64,6 @@ sendAllRequestsStart(NumberOfNodes, CurrentIndex, [Node | Tail]) ->
 createFirstNode(Master) ->
     io:format("Creating the first node~n"),
     spawn(main, nodeInit, [Master, true]).
-
-
-join(Master) ->
-    spawn(main, nodeInit, [Master, false]).
-
 
 masterWaitForFinish(TotalNumberOfNodes, NumberOfRequests, NumberOfHopsSoFar, NumberOfNodesLeft) ->
     if
