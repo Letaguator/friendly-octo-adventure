@@ -1,7 +1,7 @@
 % @author Mathias Brekkan and Ruiyang Li
 
 -module(main).
--export([start/3, start/2, master/4, operate/8, nodeInit/2, join/1, createNodes/2]).
+-export([start/3, start/2, master/5, operate/8, nodeInit/2, join/1, createNodes/2]).
 -import(methods, [getRandomNumber/2, getRandomString/1, getHash/1, adjustToLinearBounds/2, getM/0, getCircleSize/0]).
 -import(test, [printList/1]).
 -include("records.hrl"). 
@@ -23,36 +23,41 @@ createNodes(NumberOfNodes, Master) ->
 
 start(NumberOfNodes, NumberOfRequests) ->
     %%% M = math:ceil(math:log2(NumberOfNodes * NumberOfRequests * 2)),
-    Pid = spawn(main, master, [NumberOfNodes, NumberOfRequests, getM(), []]),
+    Pid = spawn(main, master, [NumberOfNodes, NumberOfRequests, getM(), [], NumberOfNodes]),
     register(master, Pid),
     createFirstNode(master).
 
-master(NumberOfNodes, NumberOfRequests, M, Nodes) ->
-    % NodesSortedByHid = lists:keysort(1, maps:to_list(NodesMap)),
-    
-    %%% sendAllRegAcc(NumberOfNodes, 1, NumberOfRequests, Nodes, Nodes),
-    % Boss print average number of hops
-    receive
-        {create, Node} -> % Register node
-            io:format("Master initiate node:\n"),
-            io:format("~w~n", [Node]), 
-            io:format("Current Nodes:~n"),
-            UpdatedNodes = [Node | Nodes],
-            printList(UpdatedNodes),
-            Node#node.pid ! {create, NumberOfRequests},
-            master(NumberOfNodes, NumberOfRequests, M, UpdatedNodes);
-        {join, Node} ->
-            io:format("Master joining node: \n"),
-            io:format("~w~n", [Node]), 
-            io:format("Current Nodes:~n"),
-            UpdatedNodes = [Node | Nodes],
-            printList(UpdatedNodes),
-            %%% find a random existing node in the network to initiate join
-            Node#node.pid ! {join, lists:nth(getRandomNumber(1, length(Nodes)), Nodes), NumberOfRequests},
-            master(NumberOfNodes, NumberOfRequests, M, UpdatedNodes)
-    end,
-    sendAllRequestsStart(NumberOfNodes, 1, Nodes).
-    % masterWaitForFinish(TotalNumberOfNodes, NumberOfRequests, NumberOfHopsSoFar, NumberOfNodesLeft).
+master(NumberOfNodes, NumberOfRequests, M, Nodes, NumberOfNodesToAdd) ->
+
+    if 
+        NumberOfNodesToAdd > 0 ->
+
+            receive
+                {create, Node} -> % Register node
+                    io:format("Master initiate node:\n"),
+                    io:format("~w~n", [Node]), 
+                    io:format("Current Nodes:~n"),
+                    UpdatedNodes = [Node | Nodes],
+                    printList(UpdatedNodes),
+                    Node#node.pid ! {create, NumberOfRequests},
+                    master(NumberOfNodes, NumberOfRequests, M, UpdatedNodes, NumberOfNodesToAdd - 1);
+                {join, Node} ->
+                    io:format("Master joining node: \n"),
+                    io:format("~w~n", [Node]), 
+                    io:format("Current Nodes:~n"),
+                    UpdatedNodes = [Node | Nodes],
+                    printList(UpdatedNodes),
+                    %%% find a random existing node in the network to initiate join
+                    io:format(">>>>>>>>>>>>>>>>>>>>>>>>>>>~w~n", [getRandomNumber(1, length(Nodes))]),
+                    Node#node.pid ! {join, lists:nth(getRandomNumber(1, length(Nodes)), Nodes), NumberOfRequests},
+                    master(NumberOfNodes, NumberOfRequests, M, UpdatedNodes, NumberOfNodesToAdd - 1)
+            end;
+        true ->
+            sendAllRequestsStart(NumberOfNodes, 1, Nodes),
+            masterWaitForFinish(NumberOfNodes, NumberOfRequests, 0, NumberOfNodes)
+    end.
+
+
 
 sendAllRequestsStart(_, _, []) -> ok;
 sendAllRequestsStart(NumberOfNodes, CurrentIndex, [Node | Tail]) ->
@@ -76,6 +81,7 @@ masterWaitForFinish(TotalNumberOfNodes, NumberOfRequests, NumberOfHopsSoFar, Num
         true ->
             receive
                 {finito, NewNumberOfHops} -> % Node completed all required requests
+                    io:format("||||||||||||||||||||||||||||||||||||||~w~n", [NumberOfNodesLeft]),
                     masterWaitForFinish(TotalNumberOfNodes, NumberOfRequests, NumberOfHopsSoFar + NewNumberOfHops, NumberOfNodesLeft - 1)
             end
     end.
@@ -102,21 +108,35 @@ nodeInit(MasterNode, IsFirstNode) ->
             operate(MasterNode, NumberOfRequests, Node, Predecessor, Successor, FingerList, false, 0);
         {join, KnownNode, NumberOfRequests} ->
             Predecessor = nil,
-            KnownNode#node.pid ! {findSuccessor, Node#node.key, Node},
-            FingerList = lists:duplicate(getM(), KnownNode),
+            KnownNode#node.pid ! {findSuccessor, Node#node.key, Node, 0},
+            io:format("11111111111111111111111"),
+            
             receive
                 {found, Key, FoundWhere, NumHops} -> % NumHops must be ignored in this case
                     io:format("Node is online:~n"),
                     io:format("~w~n", [Node]),
                     %%% node_p needs to notify node_s that it needs to change predecessor
                     FoundWhere#node.pid ! {changePredecessor, Node},
-                    operate(MasterNode, NumberOfRequests, Node, Predecessor, FoundWhere, [FoundWhere], false, 0)
+                    FingerList = lists:duplicate(getM(), FoundWhere),
+                    operate(MasterNode, NumberOfRequests, Node, Predecessor, FoundWhere, FingerList, false, 0)
             end
     end.
 
 
 operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, Successor, FingerList, CanSendRequests, TotalNumHops) ->
     receive
+
+        {showMeYourFingers} ->
+            printList(FingerList),
+            operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, Successor, FingerList, CanSendRequests, TotalNumHops);
+
+        {showMeYourSuccessor} ->
+            io:format("My Successor is:~n ~w~n", [Successor]),
+            operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, Successor, FingerList, CanSendRequests, TotalNumHops);
+        {showMeYourPredecessor} ->
+
+            io:format("My Predecessor is:~n ~w~n", [Predecessor]),
+            operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, Successor, FingerList, CanSendRequests, TotalNumHops);
         {startSendingRequests} ->
             operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, Successor, FingerList, true, TotalNumHops);
         {whatsYourPredecessor, WhoAsked} ->
@@ -125,13 +145,12 @@ operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, Successor, FingerLi
         {whatsYourSuccessor, WhoAsked} ->
             WhoAsked#node.pid ! {successor, Successor},
             operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, Successor, FingerList, CanSendRequests, TotalNumHops);
-        {findSuccessor, Key, WhoAsked} -> 
-            io:fwrite("Node:\n"),
-            io:fwrite("~w~n", [self()]),
-            io:fwrite("receieved findSuccessor request from:\n"),
-            io:fwrite("~w~n", [WhoAsked]),
-            NumHops = 1,
-            findSuccessor(Key, Node, FingerList, Successor, WhoAsked, NumHops),
+        {findSuccessor, Key, WhoAsked, NumHops} -> 
+            %io:fwrite("Node:\n"),
+            %io:fwrite("~w~n", [self()]),
+            %io:fwrite("receieved findSuccessor request from:\n"),
+            %io:fwrite("~w~n", [WhoAsked]),
+            findSuccessor(Key, Node, FingerList, Successor, WhoAsked, NumHops + 1),
             operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, Successor, FingerList, CanSendRequests, TotalNumHops);
 
 
@@ -198,9 +217,9 @@ operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, Successor, FingerLi
 fixFinger(_, _, _, M, M, NewList) ->
     lists:reverse(NewList);
 fixFinger(FingerList, Self, KnownNode, M, I, NewList) ->
-    Key = #key{id = Self#node.id + math:pow(2, I), key = nil},
+    Key = #key{id = round(Self#node.id + math:pow(2, I)) rem round(math:pow(2, getM())), key = nil},
 
-    KnownNode#node.pid ! {findSuccessor, Key, Self},
+    Self#node.pid ! {findSuccessor, Key, Self, 0},
     receive
         {found, Key, Successor, NumHops} ->
             fixFinger(FingerList, Self, KnownNode, M, I + 1, [Successor | NewList])
@@ -244,6 +263,9 @@ stabilize(Self, Successor, Predecessor) ->
 
 
 findSuccessor(Key, Node, FingerList, Successor, WhoAsked, NumHops) ->
+    io:format("~w~n", [Key]),
+    io:format("~w~n", [Node]),
+    io:format("~w~n", [Successor]),
     %%% io:fwrite("Test\n"),
     %%% io:write(Key#key.id),
     %%% io:fwrite(" - "),
@@ -276,8 +298,9 @@ findSuccessor(Key, Node, FingerList, Successor, WhoAsked, NumHops) ->
         true ->
             %%% io:fwrite("True case\n"),
             % TODO: replace 1 with something
+            io:format("case 3 keep looking~n"),
             ClosestPrecedingNode = closestPrecedingNode(Key, Node, FingerList, getM(), WhoAsked),
-            ClosestPrecedingNode#node.pid ! {findSuccessor, Key, WhoAsked}
+            ClosestPrecedingNode#node.pid ! {findSuccessor, Key, WhoAsked, NumHops}
     end.
 
 closestPrecedingNode(_, Node, _, 0, WhoAsked) ->
@@ -287,7 +310,6 @@ closestPrecedingNode(_, Node, _, 0, WhoAsked) ->
 closestPrecedingNode(Key, Node, FingerList, I, WhoAsked) ->
 
 
-    io:format("LENGHT OF FINGERLIST ~w~n", [length(FingerList)]),
     FingerListElement = lists:nth(I, FingerList),
     if
         (FingerListElement#node.id > Node#node.id) and (FingerListElement#node.id < Key#key.id) ->
