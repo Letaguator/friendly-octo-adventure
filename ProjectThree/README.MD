@@ -16,7 +16,7 @@ main:start(NumberOfNodes, NumberOfRequests, master).
 join(Name of the current running node *when you use -sname).
 
 ### What is working
-The code is close to completion, we just had some minor bugs blocking us from doing a run.
+The code is close to completion and it does compile. There is however one or more bugs that we could not trace down in time, see the report for more details.
 
 ### What is the largest network we dealt with
 N/A yet.
