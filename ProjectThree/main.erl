@@ -30,7 +30,7 @@ start(NumberOfNodes, NumberOfRequests) ->
 master(NumberOfNodes, NumberOfRequests, M, Nodes, NumberOfNodesToAdd) ->
 
     if 
-        NumberOfNodesToAdd > 0 ->
+        true -> %NumberOfNodesToAdd > 0 ->
 
             receive
                 {create, Node} -> % Register node
@@ -52,7 +52,7 @@ master(NumberOfNodes, NumberOfRequests, M, Nodes, NumberOfNodesToAdd) ->
                     Node#node.pid ! {join, lists:nth(getRandomNumber(1, length(Nodes)), Nodes), NumberOfRequests},
                     master(NumberOfNodes, NumberOfRequests, M, UpdatedNodes, NumberOfNodesToAdd - 1)
             end;
-        true ->
+        false ->
             sendAllRequestsStart(NumberOfNodes, 1, Nodes),
             masterWaitForFinish(NumberOfNodes, NumberOfRequests, 0, NumberOfNodes)
     end.
@@ -215,13 +215,17 @@ operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, Successor, FingerLi
 
 
 fixFinger(_, _, _, M, M, NewList) ->
+    io:format("+++++++++++++++++++++++++++++++++++++++++"),
     lists:reverse(NewList);
 fixFinger(FingerList, Self, KnownNode, M, I, NewList) ->
+    
     Key = #key{id = round(Self#node.id + math:pow(2, I)) rem round(math:pow(2, getM())), key = nil},
 
     Self#node.pid ! {findSuccessor, Key, Self, 0},
+    io:format("---------------------------------------~w~n", [I]),
     receive
         {found, Key, Successor, NumHops} ->
+            io:format("=======================================~w~n", [I]),
             fixFinger(FingerList, Self, KnownNode, M, I + 1, [Successor | NewList])
         after 100 ->
             io:format("Fix Finger time out~n"),
