@@ -19,19 +19,14 @@ createNodes(NumberOfNodes, Master) ->
     join(Master),
     createNodes(NumberOfNodes - 1, Master).
 
-
-
 start(NumberOfNodes, NumberOfRequests) ->
-    %%% M = math:ceil(math:log2(NumberOfNodes * NumberOfRequests * 2)),
     Pid = spawn(main, master, [NumberOfNodes, NumberOfRequests, getM(), [], NumberOfNodes]),
     register(master, Pid),
     createFirstNode(master).
 
 master(NumberOfNodes, NumberOfRequests, M, Nodes, NumberOfNodesToAdd) ->
-
     if 
-        true -> %NumberOfNodesToAdd > 0 ->
-
+        NumberOfNodesToAdd > 0 ->
             receive
                 {create, Node} -> % Register node
                     io:format("Master initiate node:\n"),
@@ -57,11 +52,9 @@ master(NumberOfNodes, NumberOfRequests, M, Nodes, NumberOfNodesToAdd) ->
             masterWaitForFinish(NumberOfNodes, NumberOfRequests, 0, NumberOfNodes)
     end.
 
-
-
 sendAllRequestsStart(_, _, []) -> ok;
 sendAllRequestsStart(NumberOfNodes, CurrentIndex, [Node | Tail]) ->
-    Node ! {startSendingRequests},
+    Node #node.pid ! {startSendingRequests},
     sendAllRequestsStart(NumberOfNodes, CurrentIndex + 1, Tail).
 
 createFirstNode(Master) ->
@@ -124,17 +117,15 @@ nodeInit(MasterNode, IsFirstNode) ->
 
 
 operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, Successor, FingerList, CanSendRequests, TotalNumHops) ->
+    io:format("~p~n", [CanSendRequests]),
     receive
-
         {showMeYourFingers} ->
             printList(FingerList),
             operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, Successor, FingerList, CanSendRequests, TotalNumHops);
-
         {showMeYourSuccessor} ->
             io:format("My Successor is:~n ~w~n", [Successor]),
             operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, Successor, FingerList, CanSendRequests, TotalNumHops);
         {showMeYourPredecessor} ->
-
             io:format("My Predecessor is:~n ~w~n", [Predecessor]),
             operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, Successor, FingerList, CanSendRequests, TotalNumHops);
         {startSendingRequests} ->
@@ -153,8 +144,6 @@ operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, Successor, FingerLi
             findSuccessor(Key, Node, FingerList, Successor, WhoAsked, NumHops + 1),
             operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, Successor, FingerList, CanSendRequests, TotalNumHops);
 
-
-
         {found, Key, FoundWhere, NumHops} ->
             io:format("Node: ~p~n", [self()]),
             io:format("Key: ~p~n", [Key#key.key]),
@@ -169,7 +158,6 @@ operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, Successor, FingerLi
             io:format("~w~n", [self()]),
             io:format("Is notified of:~n"),
             io:format("~w~n", [NewPredecessor]),
-            
             if
                 (Predecessor == nil) or ((NewPredecessor#node.id > Node#node.id) and (NewPredecessor#node.id < Predecessor#node.id)) ->
                     operate(MasterNode, NumberOfRequestsLeft - 1, Node, NewPredecessor, Successor, FingerList, CanSendRequests, TotalNumHops);
@@ -188,7 +176,6 @@ operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, Successor, FingerLi
             io:format("~w~n", [Node]),
             NewSuccessor = stabilize(Node, Successor, Predecessor),
             NewSuccessor#node.pid ! {notify, Node},
-            
 
             io:format("Node run Fix Finger~n"),
             if 
@@ -209,7 +196,7 @@ operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, Successor, FingerLi
                 CanSendRequests == false ->
                     operate(MasterNode, NumberOfRequestsLeft, Node, Predecessor, NewSuccessor, NewFingerList, CanSendRequests, TotalNumHops);
                 true ->
-                    master ! {finito}
+                    master ! {finito, TotalNumHops}
             end
     end.
 
@@ -281,8 +268,6 @@ findSuccessor(Key, Node, FingerList, Successor, WhoAsked, NumHops) ->
             io:fwrite("Goal case1\n"),
             WhoAsked#node.pid ! {found, Key, Successor, NumHops};
         
-        
-
         % TODO: What if successor is first node?
         %%% one potential solution is to have a upper bound of the identifier value
         %%% all hash are modded by round(math:pow(2, getM()))
@@ -298,7 +283,6 @@ findSuccessor(Key, Node, FingerList, Successor, WhoAsked, NumHops) ->
             %%% io:fwrite("Goal\n"),
             WhoAsked#node.pid ! {found, Key, Successor, NumHops};
 
-
         true ->
             %%% io:fwrite("True case\n"),
             % TODO: replace 1 with something
@@ -307,13 +291,10 @@ findSuccessor(Key, Node, FingerList, Successor, WhoAsked, NumHops) ->
             ClosestPrecedingNode#node.pid ! {findSuccessor, Key, WhoAsked, NumHops}
     end.
 
+%%% TODO: we need to change this so that all the finger list opperations can handle successor being 1
 closestPrecedingNode(_, Node, _, 0, WhoAsked) ->
     Node;
-
-%%% TODO: we need to change this so that all the finger list opperations can handle successor being 1
 closestPrecedingNode(Key, Node, FingerList, I, WhoAsked) ->
-
-
     FingerListElement = lists:nth(I, FingerList),
     if
         (FingerListElement#node.id > Node#node.id) and (FingerListElement#node.id < Key#key.id) ->
