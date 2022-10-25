@@ -51,7 +51,7 @@ master(NumberOfNodes, NumberOfRequests, M, Nodes, NumberOfNodesToAdd) ->
                     Node#node.pid ! {join, lists:nth(getRandomNumber(1, length(Nodes)), Nodes), NumberOfRequests},
                     master(NumberOfNodes, NumberOfRequests, M, UpdatedNodes, NumberOfNodesToAdd - 1)
             end;
-        false ->
+        true ->
             sendAllRequestsStart(NumberOfNodes, 1, Nodes),
             masterWaitForFinish(NumberOfNodes, NumberOfRequests, 0, NumberOfNodes)
     end.
