@@ -14,16 +14,29 @@
 %  - Nonlive/query if user is not connected
 
 startEngine() ->
-    engineTick({}, {}).
+    io:fwrite("Starting engine"),
+    engineTick({}, {}, {}).
 
-engineTick(Users, HashTagSubscriptions) ->
+engineTick(Users, ActiveUsers, UserFollowersMap, HashTagSubscriptions) ->
     receive
         {register, Username} ->
-            ok;
+            NewUser = #user{username = Username, pid = nil, tweets = [], followersList = [], followedHashTagTweet = [], mentionTweets = [], followingUsersTweets = [], isLoggedOn = false},
+            NewUsers = maps:put(Username, NewUser, Users),
+            engineTick(NewUsers, ActiveUsers, UserFollowersMap, HashTagSubscriptions);
         {logIn, Username, Pid} ->
-            ok;
-        {logOff, Username} ->
-            ok;
-        {sendTweet, Username} ->
-            ok;
+            NewActiveUsers = maps:put(Username, Pid, ActiveUsers),
+            engineTick(Users, NewActiveUsers, UserFollowersMap, HashTagSubscriptions);
+        {logOut, Username} ->
+            NewActiveUsers = map:remove(Username, ActiveUsers),
+            engineTick(Users, NewActiveUsers, UserFollowersMap, HashTagSubscriptions);
+        {followUser, MyUsername, FollowThisUsername} ->
+            UserFollowersEntry = map:get(FollowThisUsername, UserFollowersMap, []),
+            NewUserFollowersMap = map:put(FollowThisUser, [UserFollowersEntry | MyUsername]),
+            engineTick(Users, ActiveUsers, NewUserFollowersMap, HashTagSubscriptions);
+        {followHashTag, MyUsername, HashTag} ->
+            HashTagsEntry = maps:get(HashTag, HashTagSubscriptions, []),
+            NewHashTagSubscriptions = maps:put(HashTag, [HashTagsEntry | MyUsername]),
+            engineTick(NewUserUsers, ActiveUsers, UserFollowersMap, NewHashTagSubscriptions);
+        {sendTweet, Username, Tweet} ->
+            ok
     end.
