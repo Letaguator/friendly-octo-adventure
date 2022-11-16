@@ -1,3 +1,3 @@
 % @author Mathias Brekkan and Ruiyang Li
--record(tweet, {text, hashtags, mentions}). 
--record(user, {username, tweets, mentions, followingUsers, subscriptions}).
+-record(tweet, {Text, Hashtags, Mentions, OriginalTweeter, ActualTweeter}). 
+-record(user, {Username, Pid, Tweets, FollowersList, FollowedHashTags, MentionTweets, FollowingUsersTweets, IsLoggedOn}).
