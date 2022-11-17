@@ -1,9 +1,10 @@
 % @author Mathias Brekkan and Ruiyang Li
+-module(user).
 -include("records.hrl"). 
 
 
--module(user).
--export([register/0, reTweet/4, logOn/1, logOff/0, sendTweet/1]).
+
+-export([register/0, reTweet/4, logOn/1, logOff/0, sendTweet/3]).
 
 
 server_node() ->
@@ -28,7 +29,7 @@ reTweet(Message, Hashtags, Mentions, OG) ->
         undefined ->
             not_logged_on;
         _ -> 
-            mess_client ! {sendTweet, Messge, Hashtags, Mentions, OG},
+            mess_client ! {sendTweet, Message, Hashtags, Mentions, OG},
             ok
     end.
 
@@ -58,12 +59,12 @@ logOff() ->
 
 
 
-sendTweet(Message) ->
+sendTweet(Message, Hashtags, Mentions) ->
     case whereis(mess_client) of % Test if the client is running
         undefined ->
             not_logged_on;
         _ -> 
-            mess_client ! {sendTweet, Hashtags, Mentions},
+            mess_client ! {sendTweet, Message, Hashtags, Mentions},
             ok
     end.
 
@@ -71,7 +72,6 @@ sendTweet(Message) ->
 %%% The client process which runs on each server node
 client(Server_Node, UserName) ->
     Server_Node ! {self(), logon, UserName},
-    await_result(),
     client(Server_Node, UserName, running).
 
 client(Server_Node, UserName, running) ->
@@ -84,14 +84,14 @@ client(Server_Node, UserName, running) ->
             exit(normal);
 
         {sendReTweet, Message, Hashtags, Mentions, OG} ->
-            Tweet = #tweet{text = Message, hashtags = Hashtags, mentions = Mentions, originalTweeter = OG, actualTweeter = UserName},
+            Tweet = #tweet{text = Message, hashTags = Hashtags, mentions = Mentions, originalTweeter = OG, actualTweeter = UserName},
             Server_Node ! {sendTweet, UserName, Tweet};
         {sendTweet, Message, Hashtags, Mentions} ->
-            Tweet = #tweet{text = Message, hashtags = Hashtags, mentions = Mentions, originalTweeter = UserName, actualTweeter = UserName},
-            Server_Node ! {self(), message_to, ToName, Message};
-        {tweet, FromName, Message} ->
+            Tweet = #tweet{text = Message, hashTags = Hashtags, mentions = Mentions, originalTweeter = UserName, actualTweeter = UserName},
+            Server_Node ! {UserName, Tweet};
+        {recieveTweet, Tweet} ->
             io:format("~w~n", [Tweet]);
-        {query, Query} ->
+        {recieveQuery, Query} ->
             printList(Query)
     end,
     client(Server_Node, UserName, running).
