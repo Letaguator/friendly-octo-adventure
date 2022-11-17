@@ -6,6 +6,10 @@
 -export([register/0, reTweet/4, logOn/1, logOff/0, sendTweet/1]).
 
 
+server_node() ->
+    engine.
+
+
 
 register() ->
     case whereis(mess_client) of % Test if the client is running
@@ -24,8 +28,7 @@ reTweet(Message, Hashtags, Mentions, OG) ->
         undefined ->
             not_logged_on;
         _ -> 
-            Tweet = #tweet{text = Message, hashtags = Hashtags, mentions = Mentions, originalTweeter = OG, actualTweeter = UserName},
-            mess_client ! {sendTweet, Tweet},
+            mess_client ! {sendTweet, Messge, Hashtags, Mentions, OG},
             ok
     end.
 
@@ -60,8 +63,7 @@ sendTweet(Message) ->
         undefined ->
             not_logged_on;
         _ -> 
-            Tweet = #tweet{text = Message, hashtags = Hashtags, mentions = Mentions, originalTweeter = UserName, actualTweeter = UserName},
-            mess_client ! {sendTweet, Tweet},
+            mess_client ! {sendTweet, Hashtags, Mentions},
             ok
     end.
 
@@ -81,12 +83,12 @@ client(Server_Node, UserName, running) ->
             Server_Node ! {logOff, UserName},
             exit(normal);
 
-        {sendReTweet} ->
+        {sendReTweet, Message, Hashtags, Mentions, OG} ->
             Tweet = #tweet{text = Message, hashtags = Hashtags, mentions = Mentions, originalTweeter = OG, actualTweeter = UserName},
             Server_Node ! {sendTweet, UserName, Tweet};
-        {sendTweet, Tweet} ->
-            Server_Node ! {self(), message_to, ToName, Message},
-            await_result();
+        {sendTweet, Message, Hashtags, Mentions} ->
+            Tweet = #tweet{text = Message, hashtags = Hashtags, mentions = Mentions, originalTweeter = UserName, actualTweeter = UserName},
+            Server_Node ! {self(), message_to, ToName, Message};
         {tweet, FromName, Message} ->
             io:format("~w~n", [Tweet]);
         {query, Query} ->
