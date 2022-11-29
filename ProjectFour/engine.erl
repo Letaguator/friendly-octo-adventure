@@ -35,7 +35,6 @@ engineTick(Users, ActiveUsers, UserFollowersMap, UserRecievedTweetsMap, UserSent
             Pid ! {recieveQuery, TweetsRecieved},
             engineTick(Users, NewActiveUsers, UserFollowersMap, UserRecievedTweetsMap, UserSentTweetsMap, HashTagSubscriptions);
         {logOut, Username} ->
-
             NewActiveUsers = map:remove(Username, ActiveUsers),
             engineTick(Users, NewActiveUsers, UserFollowersMap, UserRecievedTweetsMap, UserSentTweetsMap, HashTagSubscriptions);
         {followUser, MyUsername, FollowThisUsername} ->
