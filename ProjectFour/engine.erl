@@ -32,7 +32,7 @@ engineTick(Users, ActiveUsers, UserFollowersMap, UserRecievedTweetsMap, UserSent
         {logIn, Username, Pid} ->
             NewActiveUsers = maps:put(Username, Pid, ActiveUsers),
             TweetsRecieved = maps:get(Username, UserRecievedTweetsMap, []),
-            Pid ! TweetsRecieved,
+            Pid ! {recieveQuery, TweetsRecieved},
             engineTick(Users, NewActiveUsers, UserFollowersMap, UserRecievedTweetsMap, UserSentTweetsMap, HashTagSubscriptions);
         {logOut, Username} ->
 
