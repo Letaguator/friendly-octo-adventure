@@ -8,7 +8,7 @@
 
 
 server_node() ->
-    '<0.84.0>'.
+    engine.
 
 
 
@@ -109,9 +109,9 @@ client(Server_Node, UserName, running) ->
             {engine, Server_Node} ! {followUser, UserName, FollowThisUsername};
         {followHashTag, FollowThisHashTag} ->
             {engine, Server_Node} ! {followHashTag, UserName, FollowThisHashTag};
-        {recieveTweet, Tweet} ->
+        {publishTweet, Tweet} ->
             io:format("~w~n", [Tweet]);
-        {recieveQuery, Query} ->
+        {publishQuery, Query} ->
             printList(Query)
     end,
     client(Server_Node, UserName, running).

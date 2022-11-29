@@ -39,6 +39,7 @@ engineTick(Users, ActiveUsers, UserFollowersMap, UserRecievedTweetsMap, UserSent
             NewActiveUsers = map:remove(Username, ActiveUsers),
             engineTick(Users, NewActiveUsers, UserFollowersMap, UserRecievedTweetsMap, UserSentTweetsMap, HashTagSubscriptions);
         {followUser, MyUsername, FollowThisUsername} ->
+            io:format("FlowUser").
             UserFollowersEntry = map:get(FollowThisUsername, UserFollowersMap, []),
             NewUserFollowersMap = map:put(FollowThisUsername, [UserFollowersEntry | MyUsername]),
             engineTick(Users, ActiveUsers, NewUserFollowersMap, UserRecievedTweetsMap, UserSentTweetsMap, HashTagSubscriptions);
@@ -48,6 +49,7 @@ engineTick(Users, ActiveUsers, UserFollowersMap, UserRecievedTweetsMap, UserSent
             engineTick(Users, ActiveUsers, UserFollowersMap, UserRecievedTweetsMap, UserSentTweetsMap, NewHashTagSubscriptions);
         % Tweet: text, hashtags, mentions, originalTweeter, actualTweeter
         {sendTweet, Username, Tweet} ->
+            io:format("Receved new tweet"),
             TweetsSentByUser = map:get(Username, UserSentTweetsMap, []),
             NewUserSentTweetsMap = map:put(Username, [TweetsSentByUser | Tweet], UserSentTweetsMap),
             Followers = map:get(Username, UserFollowersMap, []),
@@ -67,7 +69,7 @@ sendLiveTweets(Tweet, ActiveUsers, [CurrentUserNeedingTweet, RemaningUsersToReci
         CurrentActiveUserPid == nil ->
             ok;
         true ->
-            CurrentActiveUserPid ! {sendTweet, Tweet}
+            CurrentActiveUserPid ! {publishTweet, Tweet}
     end,
     sendLiveTweets(Tweet, ActiveUsers, RemaningUsersToRecieveTweets).
 
