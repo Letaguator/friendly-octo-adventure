@@ -13,7 +13,9 @@ zipfSumPart(N, _, N, Res) ->
 zipfSumPart(I, A, N, Res) ->
     zipfSumPart(I + 1, A, N, Res + math:pow(1 / I, A)).
 
+getUsernamesList(NumberOfUsers, UsernamesList) ->
 
+startSim(NumberOfUsers) ->
 % Take in number N of users to simulate
 % Create a list of N usernames
 % Give every user a random amount of subscribers 
@@ -24,7 +26,7 @@ zipfSumPart(I, A, N, Res) ->
 % Start simulation
 
 % Measure number of tweets pr. second
-% Measure number X
+% Measure number max amount of users during simulation
 % Measure number Y
 % Measure number Z
 % Measure number ?
