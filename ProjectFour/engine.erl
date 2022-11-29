@@ -14,8 +14,9 @@
 %  - Nonlive/query if user is not connected
 
 startEngine() ->
-    io:fwrite("Starting engine"),
+    io:fwrite("Starting engine~n"),
     Pid = spawn(engine, engineTick, [#{}, #{}, #{}, #{}, #{}, #{}]),
+    io:format("~w~n", [Pid]),
     register(engine, Pid).
 
 engineTick(Users, ActiveUsers, UserFollowersMap, UserRecievedTweetsMap, UserSentTweetsMap, HashTagSubscriptions) ->
@@ -32,6 +33,7 @@ engineTick(Users, ActiveUsers, UserFollowersMap, UserRecievedTweetsMap, UserSent
             NewActiveUsers = maps:put(Username, Pid, ActiveUsers),
             engineTick(Users, NewActiveUsers, UserFollowersMap, UserRecievedTweetsMap, UserSentTweetsMap, HashTagSubscriptions);
         {logOut, Username} ->
+
             NewActiveUsers = map:remove(Username, ActiveUsers),
             engineTick(Users, NewActiveUsers, UserFollowersMap, UserRecievedTweetsMap, UserSentTweetsMap, HashTagSubscriptions);
         {followUser, MyUsername, FollowThisUsername} ->

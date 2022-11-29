@@ -9,4 +9,3 @@ print(Var) ->
 
 test() ->
     print(Var).
-
