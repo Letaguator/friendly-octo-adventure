@@ -31,11 +31,7 @@ engineTick(Users, ActiveUsers, UserFollowersMap, UserRecievedTweetsMap, UserSent
             NewUsers = maps:put(Username, NewUser, Users),
             engineTick(NewUsers, ActiveUsers, UserFollowersMap, UserRecievedTweetsMap, UserSentTweetsMap, HashTagSubscriptions);
         {logIn, Username, Pid} ->
-<<<<<<< Updated upstream
             io:format("User logged in"),
-=======
-            io:format("logging in"),
->>>>>>> Stashed changes
             NewActiveUsers = maps:put(Username, Pid, ActiveUsers),
             TweetsRecieved = maps:get(Username, UserRecievedTweetsMap, []),
             Pid ! {recieveQuery, TweetsRecieved},
@@ -45,11 +41,7 @@ engineTick(Users, ActiveUsers, UserFollowersMap, UserRecievedTweetsMap, UserSent
             NewActiveUsers = map:remove(Username, ActiveUsers),
             engineTick(Users, NewActiveUsers, UserFollowersMap, UserRecievedTweetsMap, UserSentTweetsMap, HashTagSubscriptions);
         {followUser, MyUsername, FollowThisUsername} ->
-<<<<<<< Updated upstream
             io:format("User followed user"),
-=======
-            io:format("FlowUser"),
->>>>>>> Stashed changes
             UserFollowersEntry = map:get(FollowThisUsername, UserFollowersMap, []),
             NewUserFollowersMap = map:put(FollowThisUsername, [UserFollowersEntry | MyUsername]),
             engineTick(Users, ActiveUsers, NewUserFollowersMap, UserRecievedTweetsMap, UserSentTweetsMap, HashTagSubscriptions);
