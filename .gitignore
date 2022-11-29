@@ -19,5 +19,5 @@ ProjectTwo/tests.erl
 *.zip
 ProjectTwo/results
 
-.docx
-.pdf
+*.docx
+*.pdf
