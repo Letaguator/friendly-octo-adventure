@@ -43,12 +43,12 @@ engineTick(Users, ActiveUsers, UserFollowersMap, UserRecievedTweetsMap, UserSent
         {followUser, MyUsername, FollowThisUsername} ->
             io:format("User followed user~n"),
             UserFollowersEntry = maps:get(FollowThisUsername, UserFollowersMap, []),
-            NewUserFollowersMap = maps:put(FollowThisUsername, [UserFollowersEntry | MyUsername], UserFollowersMap),
+            NewUserFollowersMap = maps:put(FollowThisUsername, [MyUsername | UserFollowersEntry], UserFollowersMap),
             engineTick(Users, ActiveUsers, NewUserFollowersMap, UserRecievedTweetsMap, UserSentTweetsMap, HashTagSubscriptions);
         {followHashTag, MyUsername, HashTag} ->
             io:format("User followed hashtag~n"),
             HashTagsEntry = maps:get(HashTag, HashTagSubscriptions, []),
-            NewHashTagSubscriptions = maps:put(HashTag, [HashTagsEntry | MyUsername], HashTagSubscriptions),
+            NewHashTagSubscriptions = maps:put(HashTag, [MyUsername | HashTagsEntry], HashTagSubscriptions),
             engineTick(Users, ActiveUsers, UserFollowersMap, UserRecievedTweetsMap, UserSentTweetsMap, NewHashTagSubscriptions);
         % Tweet: text, hashtags, mentions, originalTweeter, actualTweeter
         {sendTweet, Username, Tweet} ->
@@ -58,7 +58,19 @@ engineTick(Users, ActiveUsers, UserFollowersMap, UserRecievedTweetsMap, UserSent
             Followers = maps:get(Username, UserFollowersMap, []),
             MentionedUsers = Tweet#tweet.mentions,
             FollowersOfHashTags = getAllUsersFromHashTags(HashTagSubscriptions, Tweet#tweet.hashTags, []),
-            AllUsersNeedingTweetRaw = lists:append(lists:append(lists:append(Followers, MentionedUsers), FollowersOfHashTags), [Tweet#tweet.originalTweeter, Tweet#tweet.actualTweeter]).
+            % io:fwrite("\n"),
+            % io:fwrite("\n"),
+            % io:write(Followers),
+            % io:fwrite("\n"),
+            % io:write(MentionedUsers),
+            % io:fwrite("\n"),
+            % io:write(FollowersOfHashTags),
+            % io:fwrite("\n"),
+            % io:write([Tweet#tweet.originalTweeter, Tweet#tweet.actualTweeter]),
+            % io:fwrite("\n"),
+            % io:fwrite("\n"),
+            AllUsersNeedingTweetRaw = Followers ++ MentionedUsers ++ FollowersOfHashTags ++ [Tweet#tweet.originalTweeter, Tweet#tweet.actualTweeter],
+            io:write(AllUsersNeedingTweetRaw),
             AllUsersNeedingTweet = sets:to_list(sets:from_list(AllUsersNeedingTweetRaw)),
             
             NewUserRecievedTweetsMap = updateRecievedTweetMap(Tweet, UserRecievedTweetsMap, AllUsersNeedingTweet),
@@ -67,7 +79,9 @@ engineTick(Users, ActiveUsers, UserFollowersMap, UserRecievedTweetsMap, UserSent
             engineTick(Users, ActiveUsers, UserFollowersMap, NewUserRecievedTweetsMap, NewUserSentTweetsMap, HashTagSubscriptions)
     end.
 
-sendLiveTweets(Tweet, ActiveUsers, [CurrentUserNeedingTweet, RemaningUsersToRecieveTweets]) ->
+sendLiveTweets(Tweet, ActiveUsers, []) ->
+    ok;
+sendLiveTweets(Tweet, ActiveUsers, [CurrentUserNeedingTweet | RemaningUsersToRecieveTweets]) ->
     CurrentActiveUserPid = maps:get(CurrentUserNeedingTweet, ActiveUsers, nil),
     if
         CurrentActiveUserPid == nil ->
@@ -79,13 +93,13 @@ sendLiveTweets(Tweet, ActiveUsers, [CurrentUserNeedingTweet, RemaningUsersToReci
 
 updateRecievedTweetMap(Tweet, UserRecievedTweetsMap, []) ->
     UserRecievedTweetsMap;
-updateRecievedTweetMap(Tweet, UserRecievedTweetsMap, [CurrentUser, RemaningUsersToRecieveTweets]) ->
+updateRecievedTweetMap(Tweet, UserRecievedTweetsMap, [CurrentUser | RemaningUsersToRecieveTweets]) ->
     CurrentRecievedTweets = maps:get(CurrentUser, UserRecievedTweetsMap, []),
-    NewUserRecievedTweetsMap = maps:put(CurrentUser, [CurrentRecievedTweets | Tweet]),
+    NewUserRecievedTweetsMap = maps:put(CurrentUser, [Tweet | CurrentRecievedTweets], UserRecievedTweetsMap),
     updateRecievedTweetMap(Tweet, NewUserRecievedTweetsMap, RemaningUsersToRecieveTweets).
 
 getAllUsersFromHashTags(HashTagSubscriptions, [], AllFollowers) ->
     AllFollowers;
-getAllUsersFromHashTags(HashTagSubscriptions, [HashTag, RemainingHashTags], AllFollowers) ->
-    UsersFollowingHashTag = maps:get(HashTag, HashTagSubscriptions),
-    getAllUsersFromHashTags(HashTagSubscriptions, RemainingHashTags, list:append(AllFollowers, UsersFollowingHashTag)).
+getAllUsersFromHashTags(HashTagSubscriptions, [HashTag | RemainingHashTags], AllFollowers) ->
+    UsersFollowingHashTag = maps:get(HashTag, HashTagSubscriptions, []),
+    getAllUsersFromHashTags(HashTagSubscriptions, RemainingHashTags, AllFollowers ++ UsersFollowingHashTag).

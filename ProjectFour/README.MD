@@ -17,7 +17,7 @@ start a master node by `erl -sname master`
 on the master node run `c(engine), engine:startEngine().`
 
 start a user node by `erl -sname <some user name>`
-ont he user node run `c(user), user:reg("<username>"), userlogIn("<username>")`
+ont he user node run `c(user), user:reg("<username>"), user:logIn("<username>").`
 
 
 
