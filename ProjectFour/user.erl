@@ -53,7 +53,9 @@ logIn(UserName) ->
     case whereis(mess_client) of
         undefined ->
             register(mess_client, spawn(user, client, [server_node(), UserName]));
-        _ -> already_logged_on
+        _ -> 
+            {engine, server_node()} ! {logIn, UserName, whereis(mess_client)}
+
     end.
 
 logOff() ->
