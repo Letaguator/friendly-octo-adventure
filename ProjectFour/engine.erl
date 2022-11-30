@@ -38,12 +38,12 @@ engineTick(Users, ActiveUsers, UserFollowersMap, UserRecievedTweetsMap, UserSent
             engineTick(Users, NewActiveUsers, UserFollowersMap, UserRecievedTweetsMap, UserSentTweetsMap, HashTagSubscriptions);
         {logOut, Username} ->
             io:format("User logged out~n"),
-            NewActiveUsers = map:remove(Username, ActiveUsers),
+            NewActiveUsers = maps:remove(Username, ActiveUsers),
             engineTick(Users, NewActiveUsers, UserFollowersMap, UserRecievedTweetsMap, UserSentTweetsMap, HashTagSubscriptions);
         {followUser, MyUsername, FollowThisUsername} ->
             io:format("User followed user~n"),
-            UserFollowersEntry = map:get(FollowThisUsername, UserFollowersMap, []),
-            NewUserFollowersMap = map:put(FollowThisUsername, [UserFollowersEntry | MyUsername]),
+            UserFollowersEntry = maps:get(FollowThisUsername, UserFollowersMap, []),
+            NewUserFollowersMap = maps:put(FollowThisUsername, [UserFollowersEntry | MyUsername]),
             engineTick(Users, ActiveUsers, NewUserFollowersMap, UserRecievedTweetsMap, UserSentTweetsMap, HashTagSubscriptions);
         {followHashTag, MyUsername, HashTag} ->
             io:format("User followed hashtag~n"),

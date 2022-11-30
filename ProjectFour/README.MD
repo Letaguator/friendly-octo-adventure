@@ -6,7 +6,7 @@ Ruiyang Li
 ### Compilation & Running
 
 Compiling code:
-- c(engine).
+- c(engine), c(user), c(simulator).
 - c(main). or c(main, [debug_info]).
 - c(methods), c(test), c(main).
 
