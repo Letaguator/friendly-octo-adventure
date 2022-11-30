@@ -37,7 +37,7 @@ reTweet(Message, Hashtags, Mentions, OG) ->
 printList([]) ->
     done;
 printList([Head | Tail]) ->
-    io:format("~w~n", [Head]),
+    io:format("~s, ", [Head]),
     printList(Tail).
 
 
@@ -116,7 +116,15 @@ client(Server_Node, UserName, running) ->
         {followHashTag, FollowThisHashTag} ->
             {engine, Server_Node} ! {followHashTag, UserName, FollowThisHashTag};
         {publishTweet, Tweet} ->
-            io:format("~w~n", [Tweet]);
+            io:format("~s tweeted: ~n", [Tweet#tweet.actualTweeter]),
+            io:format("Originally posted by ~w~n", [Tweet#tweet.originalTweeter]),
+            io:format("#"),
+            printList(Tweet#tweet.hashTags),
+            io:format("~n"),
+            io:format("@"),
+            printList(Tweet#tweet.mentions),
+            io:format("~n"),           
+            io:format("~s~n", [Tweet#tweet.text]);
         {publishQuery, Query} ->
             printList(Query)
     end,
