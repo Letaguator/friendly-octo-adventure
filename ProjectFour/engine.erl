@@ -26,33 +26,33 @@ engineTick(Users, ActiveUsers, UserFollowersMap, UserRecievedTweetsMap, UserSent
     io:format("HashTagSubscriptions: ~w~n", [HashTagSubscriptions]),
     receive
         {register, Username} ->
-            io:format("User registered"),
+            io:format("User registered~n"),
             NewUser = #user{username = Username},
             NewUsers = maps:put(Username, NewUser, Users),
             engineTick(NewUsers, ActiveUsers, UserFollowersMap, UserRecievedTweetsMap, UserSentTweetsMap, HashTagSubscriptions);
         {logIn, Username, Pid} ->
-            io:format("User logged in"),
+            io:format("User logged in~n"),
             NewActiveUsers = maps:put(Username, Pid, ActiveUsers),
             TweetsRecieved = maps:get(Username, UserRecievedTweetsMap, []),
             Pid ! {recieveQuery, TweetsRecieved},
             engineTick(Users, NewActiveUsers, UserFollowersMap, UserRecievedTweetsMap, UserSentTweetsMap, HashTagSubscriptions);
         {logOut, Username} ->
-            io:format("User logged out"),
+            io:format("User logged out~n"),
             NewActiveUsers = map:remove(Username, ActiveUsers),
             engineTick(Users, NewActiveUsers, UserFollowersMap, UserRecievedTweetsMap, UserSentTweetsMap, HashTagSubscriptions);
         {followUser, MyUsername, FollowThisUsername} ->
-            io:format("User followed user"),
+            io:format("User followed user~n"),
             UserFollowersEntry = map:get(FollowThisUsername, UserFollowersMap, []),
             NewUserFollowersMap = map:put(FollowThisUsername, [UserFollowersEntry | MyUsername]),
             engineTick(Users, ActiveUsers, NewUserFollowersMap, UserRecievedTweetsMap, UserSentTweetsMap, HashTagSubscriptions);
         {followHashTag, MyUsername, HashTag} ->
-            io:format("User followed hashtag"),
+            io:format("User followed hashtag~n"),
             HashTagsEntry = maps:get(HashTag, HashTagSubscriptions, []),
             NewHashTagSubscriptions = maps:put(HashTag, [HashTagsEntry | MyUsername]),
             engineTick(Users, ActiveUsers, UserFollowersMap, UserRecievedTweetsMap, UserSentTweetsMap, NewHashTagSubscriptions);
         % Tweet: text, hashtags, mentions, originalTweeter, actualTweeter
         {sendTweet, Username, Tweet} ->
-            io:format("Receved new tweet"),
+            io:format("Receved new tweet~n"),
             TweetsSentByUser = map:get(Username, UserSentTweetsMap, []),
             NewUserSentTweetsMap = map:put(Username, [TweetsSentByUser | Tweet], UserSentTweetsMap),
             Followers = map:get(Username, UserFollowersMap, []),

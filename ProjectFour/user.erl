@@ -4,11 +4,11 @@
 
 
 
--export([register/0, reTweet/4, logIn/1, logOff/0, sendTweet/3, client/2, client/3, followUser/1]).
+-export([register/0, reTweet/4, logIn/1, logOff/0, sendTweet/3, client/2, client/3, followUser/1, reg/1]).
 
 
 server_node() ->
-    '<0.204.0>'.
+    'master@LAPTOP-M9SIRB3U'.
 
 
 
@@ -42,6 +42,9 @@ printList([Head | Tail]) ->
 
 
 
+
+reg(UserName) ->
+    {engine, server_node()} ! {register, UserName}.
 
 
 
@@ -88,7 +91,9 @@ followHashTag(FollowThisHashTag) ->
 
 %%% The client process which runs on each server node
 client(Server_Node, UserName) ->
+
     {engine, Server_Node} ! {logIn, UserName, self()},
+    io:format("login information sent~n"),
     client(Server_Node, UserName, running).
 
 client(Server_Node, UserName, running) ->
