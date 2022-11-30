@@ -4,7 +4,7 @@
 
 
 
--export([register/0, reTweet/4, logIn/1, logOff/0, sendTweet/3, client/2, client/3, followUser/1, reg/1]).
+-export([register/0, reTweet/4, logIn/1, logOut/0, sendTweet/3, client/2, client/3, followUser/1, reg/1, followHashTag/1]).
 
 
 server_node() ->
@@ -58,8 +58,8 @@ logIn(UserName) ->
 
     end.
 
-logOff() ->
-    mess_client ! logoff.
+logOut() ->
+    mess_client ! logOut.
 
 
 
@@ -100,7 +100,6 @@ client(Server_Node, UserName) ->
 
 client(Server_Node, UserName, running) ->
     receive
-
         register ->
             {engine, Server_Node} ! {register, UserName};
         logOut ->
