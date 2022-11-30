@@ -19,9 +19,10 @@ on the master node run `c(engine), engine:startEngine().`
 start a user node by `erl -sname <some user name>`
 ont he user node run `c(user), user:reg("<username>"), userlogIn("<username>")`
 
+
+
 other functionalities:
 ```
-    user:follow
 
 ```
 
