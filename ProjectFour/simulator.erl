@@ -1,6 +1,8 @@
 % @author Mathias Brekkan and Ruiyang Li
 -module(simulator).
 -export([zipf/3, startSim/1]).
+-include("records.hrl"). 
+
 
 % Formula from http://www.math.wm.edu/~leemis/chart/UDR/PDFs/Zipf.pdf
 % In our case x can be number of subscribers, n can be maximum amount of subscribers
@@ -21,14 +23,16 @@ getRandomString(Length) ->
         [], lists:seq(1, Length)
     ).
 
-getUsernamesList(0, UsernamesList) ->
+getUsernamesList(0, UsernamesList, _) ->
     UsernamesList;
-getUsernamesList(NumberOfUsers, UsernamesList) ->
+getUsernamesList(NumberOfUsers, UsernamesList, NumberOfTotalUsers) ->
     Username = getRandomString(16),
-    getUsernamesList(NumberOfUsers - 1, [Username | UsernamesList]).
+    UserPop = #userPop{username = Username, popularity = zipf(NumberOfUsers, 3, NumberOfTotalUsers)},
+    getUsernamesList(NumberOfUsers - 1, [UserPop | UsernamesList], NumberOfTotalUsers).
+
 
 startSim(NumberOfUsers) ->
-    Usernames = getUsernamesList(NumberOfUsers, []),
+    Usernames = getUsernamesList(NumberOfUsers, [], NumberOfUsers ),
     io:write(Usernames).
 % Create a list of N usernames
 % Give every user a random amount of subscribers 
