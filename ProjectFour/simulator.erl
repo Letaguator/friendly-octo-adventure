@@ -1,6 +1,6 @@
 % @author Mathias Brekkan and Ruiyang Li
 -module(simulator).
--export([zipf/3, zipfSumPart/4]).
+-export([zipf/3, startSim/1]).
 
 % Formula from http://www.math.wm.edu/~leemis/chart/UDR/PDFs/Zipf.pdf
 % In our case x can be number of subscribers, n can be maximum amount of subscribers
@@ -13,10 +13,23 @@ zipfSumPart(N, _, N, Res) ->
 zipfSumPart(I, A, N, Res) ->
     zipfSumPart(I + 1, A, N, Res + math:pow(1 / I, A)).
 
+getRandomString(Length) ->
+    AllowedChars = "abcdefghijklmnopqrstuvwxyz1234567890",
+    MaxLength = length(AllowedChars),
+    lists:foldl(
+        fun(_, Acc) -> [lists:nth(crypto:rand_uniform(1, MaxLength), AllowedChars)] ++ Acc end,
+        [], lists:seq(1, Length)
+    ).
+
+getUsernamesList(0, UsernamesList) ->
+    UsernamesList;
 getUsernamesList(NumberOfUsers, UsernamesList) ->
+    Username = getRandomString(16),
+    getUsernamesList(NumberOfUsers - 1, [Username | UsernamesList]).
 
 startSim(NumberOfUsers) ->
-% Take in number N of users to simulate
+    Usernames = getUsernamesList(NumberOfUsers, []),
+    io:write(Usernames).
 % Create a list of N usernames
 % Give every user a random amount of subscribers 
 % For every user with subscriber S, make S users take their username as input for subscription

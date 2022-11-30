@@ -70,7 +70,7 @@ engineTick(Users, ActiveUsers, UserFollowersMap, UserRecievedTweetsMap, UserSent
             % io:fwrite("\n"),
             % io:fwrite("\n"),
             AllUsersNeedingTweetRaw = Followers ++ MentionedUsers ++ FollowersOfHashTags ++ [Tweet#tweet.originalTweeter, Tweet#tweet.actualTweeter],
-            io:write(AllUsersNeedingTweetRaw),
+            % io:write(AllUsersNeedingTweetRaw),
             AllUsersNeedingTweet = sets:to_list(sets:from_list(AllUsersNeedingTweetRaw)),
             
             NewUserRecievedTweetsMap = updateRecievedTweetMap(Tweet, UserRecievedTweetsMap, AllUsersNeedingTweet),
