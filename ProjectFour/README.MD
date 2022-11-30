@@ -23,6 +23,12 @@ ont he user node run `c(user), user:reg("<username>"), userlogIn("<username>")`
 
 other functionalities:
 ```
+user:sendTweet(Message, Hashtags, Mentions)
+user:followUser(FollowThisUsername)
+user:followHashTag(FollowThisHashTag)
+user:sendTweet(Message, Hashtags, Mentions)
+user:logOff()
+user:reTweet(Message, Hashtags, Mentions, OG)
 
 ```
 
