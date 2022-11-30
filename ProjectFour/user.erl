@@ -41,6 +41,23 @@ printList([Head | Tail]) ->
     printList(Tail).
 
 
+printQuery([]) ->
+    done;
+printQuery([Head | Tail]) ->
+    printTweet(Head),
+    printQuery(Tail).
+
+
+printTweet(Tweet) ->
+    io:format("~s tweeted: ~n", [Tweet#tweet.actualTweeter]),
+    io:format("Originally posted by ~s~n", [Tweet#tweet.originalTweeter]),
+    io:format("#"),
+    printList(Tweet#tweet.hashTags),
+    io:format("~n"),
+    io:format("@"),
+    printList(Tweet#tweet.mentions),
+    io:format("~n"),           
+    io:format("~s~n", [Tweet#tweet.text]).
 
 
 reg(UserName) ->
@@ -116,17 +133,9 @@ client(Server_Node, UserName, running) ->
         {followHashTag, FollowThisHashTag} ->
             {engine, Server_Node} ! {followHashTag, UserName, FollowThisHashTag};
         {publishTweet, Tweet} ->
-            io:format("~s tweeted: ~n", [Tweet#tweet.actualTweeter]),
-            io:format("Originally posted by ~w~n", [Tweet#tweet.originalTweeter]),
-            io:format("#"),
-            printList(Tweet#tweet.hashTags),
-            io:format("~n"),
-            io:format("@"),
-            printList(Tweet#tweet.mentions),
-            io:format("~n"),           
-            io:format("~s~n", [Tweet#tweet.text]);
-        {publishQuery, Query} ->
-            printList(Query)
+            printTweet(Tweet);
+        {recieveQuery, Query} ->
+            printQuery(Query)
     end,
     client(Server_Node, UserName, running).
 
