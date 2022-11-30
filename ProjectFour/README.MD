@@ -11,5 +11,21 @@ Compiling code:
 - c(methods), c(test), c(main).
 
 
+To run the code:
+
+start a master node by `erl -sname master`
+on the master node run `c(engine), engine:startEngine().`
+
+start a user node by `erl -sname <some user name>`
+ont he user node run `c(user), user:reg("<username>"), userlogIn("<username>")`
+
+other functionalities:
+```
+    user:follow
+
+```
+
+
+
 ### Code snippets
 Code snippets can be found in the report
