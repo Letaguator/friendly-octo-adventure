@@ -58,7 +58,8 @@ engineTick(Users, ActiveUsers, UserFollowersMap, UserRecievedTweetsMap, UserSent
             Followers = maps:get(Username, UserFollowersMap, []),
             MentionedUsers = Tweet#tweet.mentions,
             FollowersOfHashTags = getAllUsersFromHashTags(HashTagSubscriptions, Tweet#tweet.hashTags, []),
-            AllUsersNeedingTweet = sets:to_list(sets:from_list(lists:append(Followers, MentionedUsers, FollowersOfHashTags, [Tweet#tweet.originalTweeter, Tweet#tweet.actualTweeter]))),
+            AllFollowersListRaw = lists:append(lists:append(lists:append(Followers, MentionedUsers), FollowersOfHashTags), [Tweet#tweet.originalTweeter, Tweet#tweet.actualTweeter]).
+            AllUsersNeedingTweet = sets:to_list(sets:from_list(AllFollowersListRaw)),
             
             NewUserRecievedTweetsMap = updateRecievedTweetMap(Tweet, UserRecievedTweetsMap, AllUsersNeedingTweet),
             
