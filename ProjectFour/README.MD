@@ -3,6 +3,9 @@
 Mathias Brekkan
 Ruiyang Li
 
+### Important
+For a more in-depth look, it is recommended to look at the report, as this README.MD is not exhaustive.
+
 ### Compilation & Running
 
 Compiling code:
