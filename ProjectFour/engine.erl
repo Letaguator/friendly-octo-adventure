@@ -20,16 +20,21 @@ startEngine() ->
     register(engine, Pid).
 
 engineTick(Users, ActiveUsers, UserFollowersMap, UserRecievedTweetsMap, UserSentTweetsMap, HashTagSubscriptions) ->
-    io:format("Users: ~w~n", [Users]),
-    io:format("ActiveUsers: ~w~n", [ActiveUsers]),
-    io:format("UserFollowersMaps: ~w~n", [UserFollowersMap]),
-    io:format("HashTagSubscriptions: ~w~n", [HashTagSubscriptions]),
+    % io:format("Users: ~w~n", [Users]),
+    io:format("ActiveUsers: ~w~n", [maps:size(ActiveUsers)]),
+    % io:format("UserFollowersMaps: ~w~n", [UserFollowersMap]),
+    % io:format("HashTagSubscriptions: ~w~n", [HashTagSubscriptions]),
     receive
         {register, Username} ->
             io:format("User registered~n"),
             NewUser = #user{username = Username},
             NewUsers = maps:put(Username, NewUser, Users),
             engineTick(NewUsers, ActiveUsers, UserFollowersMap, UserRecievedTweetsMap, UserSentTweetsMap, HashTagSubscriptions);
+        {query, Username, Pid} ->
+            io:format("User queried in~n"),
+            TweetsRecieved = maps:get(Username, UserRecievedTweetsMap, []),
+            Pid ! {recieveQuery, TweetsRecieved},
+            engineTick(Users, ActiveUsers, UserFollowersMap, UserRecievedTweetsMap, UserSentTweetsMap, HashTagSubscriptions);
         {logIn, Username, Pid} ->
             io:format("User logged in~n"),
             NewActiveUsers = maps:put(Username, Pid, ActiveUsers),

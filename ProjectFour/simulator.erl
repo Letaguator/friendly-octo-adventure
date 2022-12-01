@@ -1,8 +1,8 @@
 % @author Mathias Brekkan and Ruiyang Li
 -module(simulator).
--export([zipf/3, startSim/1]).
+-export([zipf/3, startSim/1, startSimLifecycle/3]).
 -include("records.hrl"). 
-
+-import(user, [query/1, register/0, reTweet/4, logIn/1, logOut/0, sendTweet/3, client/2, client/3, followUser/1, reg/1, followHashTag/1]).
 
 % Formula from http://www.math.wm.edu/~leemis/chart/UDR/PDFs/Zipf.pdf
 % In our case x can be number of subscribers, n can be maximum amount of subscribers
@@ -40,8 +40,8 @@ allocateSubscribers(Users, [CurrentUser | UserLeft], NumberOfUsers, SubscriberMa
     UserPop = CurrentUser#userPop.popularity,
     TotalSubscriberCount = round(UserPop * NumberOfUsers),
     RandomIndex = getRandomNumber(1, NumberOfUsers),
-    findSubscribersForUser(Username, Users, RandomIndex, TotalSubscriberCount, SubscriberMap),
-    allocateSubscribers(Users, UserLeft, NumberOfUsers, SubscriberMap).
+    NewSubscriberMap = findSubscribersForUser(Username, Users, RandomIndex, TotalSubscriberCount, SubscriberMap),
+    allocateSubscribers(Users, UserLeft, NumberOfUsers, NewSubscriberMap).
 
 findSubscribersForUser(CurrentUsername, Usernames, IndexToFetchUsersFrom, 0, SubscriberMap) ->
     SubscriberMap;
@@ -49,21 +49,66 @@ findSubscribersForUser(CurrentUsername, Users, IndexToFetchUsersFrom, TotalSubsc
     CurrentUserWhoWillSubscribe = lists:nth(IndexToFetchUsersFrom, Users),
     UsernameWhoWillSubscribe = CurrentUserWhoWillSubscribe#userPop.username,
     UsersUserWillSubscribeTo = maps:get(UsernameWhoWillSubscribe, SubscriberMap, []),
-    NewSubscriberMap = maps:put(UsernameWhoWillSubscribe, UsersUserWillSubscribeTo ++ CurrentUsername, SubscriberMap),
+    NewSubscriberMap = maps:put(UsernameWhoWillSubscribe, UsersUserWillSubscribeTo ++ [CurrentUsername], SubscriberMap),
     NextIndex = IndexToFetchUsersFrom + 1,
     if
         NextIndex > length(Users) ->
-            findSubscribersForUser(CurrentUsername, Users, 1, TotalSubscriberCount - 1, SubscriberMap);
+            findSubscribersForUser(CurrentUsername, Users, 1, TotalSubscriberCount - 1, NewSubscriberMap);
         true ->
-            findSubscribersForUser(CurrentUsername, Users, NextIndex, TotalSubscriberCount - 1, SubscriberMap)
+            findSubscribersForUser(CurrentUsername, Users, NextIndex, TotalSubscriberCount - 1, NewSubscriberMap)
     end.
 
 startSim(NumberOfUsers) ->
     Usernames = getUsernamesList(NumberOfUsers, [], NumberOfUsers),
     SubscriberMap = allocateSubscribers(Usernames, Usernames, NumberOfUsers, #{}),
-    io:write(SubscriberMap),
-    io:write(Usernames).
+    startUsers(Usernames, SubscriberMap).
 
+startUsers([], SubscriberMap) ->
+    ok;
+startUsers([CurrentUser | UsernamesLeft], SubscriberMap) ->
+    Username = CurrentUser#userPop.username,
+    UserPop = CurrentUser#userPop.popularity,
+    UsersToSubscribeTo = maps:get(Username, SubscriberMap, []),
+    spawn(simulator, startSimLifecycle, [Username, UserPop, UsersToSubscribeTo]),
+    startUsers(UsernamesLeft, SubscriberMap).
+
+subscribeToAllDesignatedUsers(_, []) ->
+    ok;
+subscribeToAllDesignatedUsers(Username, [UserToFollow | UsersLeftToFollow]) ->
+    followUser(UserToFollow),
+    io:format("~s~n", [UserToFollow]),
+    subscribeToAllDesignatedUsers(Username, UsersLeftToFollow).
+
+% register/0, reTweet/4, logIn/1, logOut/0, sendTweet/3, client/2, client/3, followUser/1, reg/1, followHashTag/1
+startSimLifecycle(Username, UserPop, SubscriberList) ->
+    reg(Username),
+    logIn(Username),
+    subscribeToAllDesignatedUsers(Username, SubscriberList),
+    simLifecycle(Username, UserPop).
+simLifecycle(Username, UserPop) ->
+    LogOutProb = random:uniform(),
+    if
+        LogOutProb < UserPop/5 ->
+            logOut(),
+            SleepTime = round(50000 * random:uniform() * (1 - UserPop)),
+            timer:sleep(SleepTime),
+            logIn(Username);
+        true ->
+            ok
+    end,
+
+    timer:sleep(1000),
+    TweetProbability = random:uniform(),
+    if
+        TweetProbability < UserPop ->
+            sendTweet("Message", [], []);
+        true ->
+            ok
+    end,
+    
+    % send retweets periodically
+
+    simLifecycle(Username, UserPop).
 % For every user with subscriber S, make S users take their username as input for subscription
 % Give every user a online/offline behaviour, determining how often they connect/disconnect, zipf
 % Give every user a tweet frequency rate, the higher the subscriber count S, the higher the rate TFR, zipf

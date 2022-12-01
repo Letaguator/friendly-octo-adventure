@@ -2,13 +2,12 @@
 -module(user).
 -include("records.hrl"). 
 
-
-
--export([register/0, reTweet/4, logIn/1, logOut/0, sendTweet/3, client/2, client/3, followUser/1, reg/1, followHashTag/1]).
+-export([query/1, register/0, reTweet/4, logIn/1, logOut/0, sendTweet/3, client/2, client/3, followUser/1, reg/1, followHashTag/1]).
 
 
 server_node() ->
     'master@LAPTOP-M9SIRB3U'.
+    % 'mast@Laptop-Waldur'.
 
 
 
@@ -47,8 +46,19 @@ printQuery([Head | Tail]) ->
     printTweet(Head),
     printQuery(Tail).
 
-
 printTweet(Tweet) ->
+    io:format("~s tweeted: ~n", [Tweet#tweet.actualTweeter]),
+    io:format("Originally posted by ~s~n", [Tweet#tweet.originalTweeter]),
+    io:format("#"),
+    printList(Tweet#tweet.hashTags),
+    io:format("~n"),
+    io:format("@"),
+    printList(Tweet#tweet.mentions),
+    io:format("~n"),           
+    io:format("~s~n", [Tweet#tweet.text]).
+
+printTweet(Username, Tweet) ->
+    io:format("~s recieved: ~n", [Username]),
     io:format("~s tweeted: ~n", [Tweet#tweet.actualTweeter]),
     io:format("Originally posted by ~s~n", [Tweet#tweet.originalTweeter]),
     io:format("#"),
@@ -64,7 +74,6 @@ reg(UserName) ->
     {engine, server_node()} ! {register, UserName}.
 
 
-
 %%% User Commands
 logIn(UserName) ->
     case whereis(mess_client) of
@@ -72,7 +81,14 @@ logIn(UserName) ->
             register(mess_client, spawn(user, client, [server_node(), UserName]));
         _ -> 
             {engine, server_node()} ! {logIn, UserName, whereis(mess_client)}
+    end.
 
+query(UserName) ->
+    case whereis(mess_client) of
+        undefined ->
+            register(mess_client, spawn(user, client, [server_node(), UserName]));
+        _ -> 
+            {engine, server_node()} ! {query, UserName, whereis(mess_client)}
     end.
 
 logOut() ->
@@ -108,7 +124,7 @@ followHashTag(FollowThisHashTag) ->
     end. 
     
 
-%%% The client process which runs on each server node
+%%% The client process which runs on each client node
 client(Server_Node, UserName) ->
 
     {engine, Server_Node} ! {logIn, UserName, self()},
@@ -133,8 +149,10 @@ client(Server_Node, UserName, running) ->
         {followHashTag, FollowThisHashTag} ->
             {engine, Server_Node} ! {followHashTag, UserName, FollowThisHashTag};
         {publishTweet, Tweet} ->
-            printTweet(Tweet);
+            printTweet(UserName, Tweet);
         {recieveQuery, Query} ->
+            % Forward to sim last tweet
+
             printQuery(Query)
     end,
     client(Server_Node, UserName, running).
