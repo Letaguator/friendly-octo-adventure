@@ -2,12 +2,12 @@
 -module(userAPI).
 -include("records.hrl"). 
 
--export([spawnClient/1, query/1, register/0, reTweet/4, logIn/1, logOut/0, sendTweet/3, client/2, client/3, followUser/1, reg/1, followHashTag/1]).
+-export([server_node/0, spawnClient/1, query/1, register/0, reTweet/4, logIn/1, logOut/0, sendTweet/3, client/2, client/3, followUser/1, reg/1, followHashTag/1]).
 
 
 server_node() ->
-    % 'master@LAPTOP-M9SIRB3U'.
-    'mast@Laptop-Waldur'.
+    'master@LAPTOP-M9SIRB3U'.
+    %'mast@Laptop-Waldur'.
 
 
 %% NOT IN USE
@@ -54,8 +54,8 @@ printTweet(Tweet) ->
     % io:format("~n"),
     % io:format("@"),
     % printList(Tweet#tweet.mentions),
-    io:format("~n"),           
-    io:format("~s~n", [Tweet#tweet.text]).
+    %io:format("~n"),           
+    %io:format("~s~n", [Tweet#tweet.text]).
 
 printTweet(Username, Tweet) ->
     io:format("~s recieved tweet: ~s from ~s ~n", [Username, Tweet#tweet.text, Tweet#tweet.actualTweeter]).

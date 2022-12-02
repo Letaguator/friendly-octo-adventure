@@ -2,7 +2,7 @@
 -module(simulator).
 -export([zipf/3, startSim/1, startSimLifecycle/3]).
 -include("records.hrl"). 
--import(userAPI, [spawnClient/1, query/1, register/0, reTweet/4, logIn/1, logOut/0, sendTweet/3, client/2, client/3, followUser/1, reg/1, followHashTag/1]).
+-import(userAPI, [server_node/0, spawnClient/1, query/1, register/0, reTweet/4, logIn/1, logOut/0, sendTweet/3, client/2, client/3, followUser/1, reg/1, followHashTag/1]).
 
 % Formula from http://www.math.wm.edu/~leemis/chart/UDR/PDFs/Zipf.pdf
 % In our case x can be number of subscribers, n can be maximum amount of subscribers
@@ -78,12 +78,8 @@ subscribeToAllDesignatedUsers(_, _, []) ->
 subscribeToAllDesignatedUsers(ClientID, Username, [UserToFollow | UsersLeftToFollow]) ->
     % followUser(UserToFollow),
     {engine, server_node()} ! {followUser, Username, UserToFollow},
-    io:format("~s~n", [UserToFollow]),
+    %io:format("~s~n", [UserToFollow]),
     subscribeToAllDesignatedUsers(ClientID, Username, UsersLeftToFollow).
-
-server_node() ->
-    % 'master@LAPTOP-M9SIRB3U'.
-    'slave@Laptop-Waldur'.
 
 % register/0, reTweet/4, logIn/1, logOut/0, sendTweet/3, client/2, client/3, followUser/1, reg/1, followHashTag/1
 startSimLifecycle(Username, UserPop, SubscriberList) ->
@@ -105,7 +101,7 @@ simLifecycle(ClientID, Username, UserPop) ->
         true ->
             ok
     end,
-    io:write(UserPop),
+    % io:write(UserPop),
     timer:sleep(1000),
     TweetProbability = random:uniform(),
     if
