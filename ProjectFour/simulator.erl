@@ -78,17 +78,12 @@ startUsers([CurrentUser | UsernamesLeft], SubscriberMap) ->
 subscribeToAllDesignatedUsers(_, _, []) ->
     ok;
 subscribeToAllDesignatedUsers(ClientID, Username, [UserToFollow | UsersLeftToFollow]) ->
-    % followUser(UserToFollow),
     {engine, server_node()} ! {followUser, Username, UserToFollow},
-    %io:format("~s~n", [UserToFollow]),
     subscribeToAllDesignatedUsers(ClientID, Username, UsersLeftToFollow).
 
-% register/0, reTweet/4, logIn/1, logOut/0, sendTweet/3, client/2, client/3, followUser/1, reg/1, followHashTag/1
 startSimLifecycle(Username, UserPop, SubscriberList) ->
     ClientID = self(),
-    %reg(Username),
     {engine, server_node()} ! {register, Username},
-    % logIn(Username),
     {engine, server_node()} ! {logIn, Username, ClientID},
     subscribeToAllDesignatedUsers(ClientID, Username, SubscriberList),
     simLifecycle(ClientID, Username, UserPop).
@@ -115,7 +110,6 @@ simLifecycle(ClientID, Username, UserPop) ->
 
     receive
         {publishTweet, RecievedTweet} ->
-            printTweet(Username, RecievedTweet),
             RetweetProbability = random:uniform(),
             if
                 RetweetProbability < 0.2 ->
@@ -130,13 +124,6 @@ simLifecycle(ClientID, Username, UserPop) ->
             ok
     end,
     simLifecycle(ClientID, Username, UserPop).
-
-% Total number of users
-% Tweets pr. millisecond
-% Retweets pr milisecond
-% Total number of tweets
-% Total number of rettweets
-% Number of Tweets
 
 printQuery(_, []) ->
     done;

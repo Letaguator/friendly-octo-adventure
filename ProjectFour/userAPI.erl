@@ -7,7 +7,6 @@
 
 server_node() ->
     'master@LAPTOP-M9SIRB3U'.
-    % 'mast@Laptop-Waldur'.
 
 
 
