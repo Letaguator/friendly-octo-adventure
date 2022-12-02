@@ -1,8 +1,7 @@
 % @author Mathias Brekkan and Ruiyang Li
 -module(simulator).
 -export([zipf/3, startSim/1, startSimLifecycle/3]).
--include("records.hrl"). 
--import(userAPI, [server_node/0, spawnClient/1, query/1, register/0, reTweet/4, logIn/1, logOut/0, sendTweet/3, client/2, client/3, followUser/1, reg/1, followHashTag/1]).
+-include("records.hrl").
 
 % Formula from http://www.math.wm.edu/~leemis/chart/UDR/PDFs/Zipf.pdf
 % In our case x can be number of subscribers, n can be maximum amount of subscribers
@@ -83,7 +82,7 @@ subscribeToAllDesignatedUsers(ClientID, Username, [UserToFollow | UsersLeftToFol
 
 % register/0, reTweet/4, logIn/1, logOut/0, sendTweet/3, client/2, client/3, followUser/1, reg/1, followHashTag/1
 startSimLifecycle(Username, UserPop, SubscriberList) ->
-    ClientID = spawnClient(Username),
+    ClientID = self(),
     %reg(Username),
     {engine, server_node()} ! {register, Username},
     % logIn(Username),
@@ -101,7 +100,6 @@ simLifecycle(ClientID, Username, UserPop) ->
         true ->
             ok
     end,
-    % io:write(UserPop),
     timer:sleep(1000),
     TweetProbability = random:uniform(),
     if
@@ -111,20 +109,42 @@ simLifecycle(ClientID, Username, UserPop) ->
         true ->
             ok
     end,
-    
-    % send retweets periodically
 
+    receive
+        {publishTweet, RecievedTweet} ->
+            printTweet(Username, RecievedTweet),
+            RetweetProbability = random:uniform(),
+            if
+                RetweetProbability < 0.2 ->
+                    Retweet = #tweet{text = RecievedTweet#tweet.text, hashTags = RecievedTweet#tweet.hashTags, mentions = RecievedTweet#tweet.mentions, originalTweeter = RecievedTweet#tweet.originalTweeter, actualTweeter = Username},
+                    {engine, server_node()} ! {sendTweet, Username, Retweet};
+                true ->
+                    ok
+            end;
+        {recieveQuery, Query} ->
+            printQuery(Username, Query)
+        after 40 ->
+            ok
+    end,
     simLifecycle(ClientID, Username, UserPop).
-% For every user with subscriber S, make S users take their username as input for subscription
-% Give every user a online/offline behaviour, determining how often they connect/disconnect, zipf
-% Give every user a tweet frequency rate, the higher the subscriber count S, the higher the rate TFR, zipf
-% Give every user a retweet rate, the higher the subscriber count S, the higher the retweet rate RR, zipf
-% Start simulation
 
-% Measure number of tweets pr. second
-% Measure number max amount of users during simulation
-% Measure number Y
-% Measure number Z
-% Measure number ?
-% Measure number ?
-% Measure number ?
+% Total number of users
+% Tweets pr. millisecond
+% Retweets pr milisecond
+% Total number of tweets
+% Total number of rettweets
+% Number of Tweets
+
+printQuery(_, []) ->
+    done;
+printQuery(Username, [Head | Tail]) ->
+    printTweet(Username, Head),
+    printQuery(Username, Tail).
+
+printTweet(Username, Tweet) ->
+    if
+        Tweet#tweet.actualTweeter == Tweet#tweet.originalTweeter ->
+            io:format("~s recieved tweet: ~s from ~s ~n", [Username, Tweet#tweet.text, Tweet#tweet.actualTweeter]);
+        true ->
+            io:format("~s recieved retweet from ~s originally posted by ~s with data: ~s ~n", [Username, Tweet#tweet.actualTweeter, Tweet#tweet.originalTweeter, Tweet#tweet.text])
+    end.

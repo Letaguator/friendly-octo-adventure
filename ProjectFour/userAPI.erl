@@ -68,14 +68,14 @@ printTweet(Username, Tweet) ->
     % io:format("~n"),           
     % io:format("~s~n", [Tweet#tweet.text]).
 
+%% NOT IN USE
+%% NOT IN USE
+%% NOT IN USE
+%% NOT IN USE
+%% NOT IN USE
 spawnClient(Username) -> 
     spawn(user, client, [server_node(), Username]).
 
-%% NOT IN USE
-%% NOT IN USE
-%% NOT IN USE
-%% NOT IN USE
-%% NOT IN USE
 reg(UserName) ->
     {engine, server_node()} ! {register, UserName}.
 
@@ -97,12 +97,6 @@ followUser(FollowThisUsername) ->
 
 followHashTag(FollowThisHashTag) ->
     mess_client ! {followHashTag, FollowThisHashTag}.
-%% NOT IN USE
-%% NOT IN USE
-%% NOT IN USE
-%% NOT IN USE
-%% NOT IN USE
-%% NOT IN USE
 
 %%% The client process which runs on each client node
 client(Server_Node, UserName) ->
@@ -134,3 +128,10 @@ client(Server_Node, UserName, running) ->
     end,
     client(Server_Node, UserName, running).
 
+
+%% NOT IN USE
+%% NOT IN USE
+%% NOT IN USE
+%% NOT IN USE
+%% NOT IN USE
+%% NOT IN USE
