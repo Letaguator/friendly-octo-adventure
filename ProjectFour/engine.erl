@@ -1,8 +1,10 @@
 % @author Mathias Brekkan and Ruiyang Li
 
 -module(engine).
--export([startEngine/0, engineTick/6, sendLiveTweets/3]).
+-export([startEngine/0, engineTick/10, sendLiveTweets/3]).
 -include("records.hrl"). 
+
+
 
 % Engine concepts
 % Register account
@@ -13,46 +15,53 @@
 %  - Live if user is connected
 %  - Nonlive/query if user is not connected
 
+
+
 startEngine() ->
     io:fwrite("Starting engine~n"),
-    register(engine, spawn(engine, engineTick, [#{}, #{}, #{}, #{}, #{}, #{}])).
+    register(engine, spawn(engine, engineTick, [erlang:timestamp(), erlang:timestamp(), 0, 0, #{}, #{}, #{}, #{}, #{}, #{}])).
 
-engineTick(Users, ActiveUsers, UserFollowersMap, UserRecievedTweetsMap, UserSentTweetsMap, HashTagSubscriptions) ->
-    % io:format("Users: ~w~n", [Users]),
+engineTick(StartTime, CurTime, TweetSent, RetweetSent, Users, ActiveUsers, UserFollowersMap, UserRecievedTweetsMap, UserSentTweetsMap, HashTagSubscriptions) ->
+    io:format("Time: ~w~n", [timer:now_diff(CurTime, StartTime) / 1000000]),
+    io:format("Users: ~w~n", [maps:size(Users)]),
     io:format("ActiveUsers: ~w~n", [maps:size(ActiveUsers)]),
-    io:format("UserFollowersMaps: ~w~n", [UserFollowersMap]),
+    io:format("Tweet Sent: ~w~n", [TweetSent]),
+    io:format("Retweet Sent: ~w~n", [RetweetSent]),
+    
+    % io:format("UserFollowersMaps: ~w~n", [UserFollowersMap]),
     % io:format("HashTagSubscriptions: ~w~n", [HashTagSubscriptions]),
+
     receive
         {register, Username} ->
             io:format("User registered~n"),
             NewUser = #user{username = Username},
             NewUsers = maps:put(Username, NewUser, Users),
-            engineTick(NewUsers, ActiveUsers, UserFollowersMap, UserRecievedTweetsMap, UserSentTweetsMap, HashTagSubscriptions);
+            engineTick(StartTime, erlang:timestamp(), TweetSent, RetweetSent, NewUsers, ActiveUsers, UserFollowersMap, UserRecievedTweetsMap, UserSentTweetsMap, HashTagSubscriptions);
         {query, Username, Pid} ->
             io:format("User queried in~n"),
             TweetsRecieved = maps:get(Username, UserRecievedTweetsMap, []),
             Pid ! {recieveQuery, TweetsRecieved},
-            engineTick(Users, ActiveUsers, UserFollowersMap, UserRecievedTweetsMap, UserSentTweetsMap, HashTagSubscriptions);
+            engineTick(StartTime, erlang:timestamp(), TweetSent, RetweetSent, Users, ActiveUsers, UserFollowersMap, UserRecievedTweetsMap, UserSentTweetsMap, HashTagSubscriptions);
         {logIn, Username, Pid} ->
             io:format("User logged in~n"),
             NewActiveUsers = maps:put(Username, Pid, ActiveUsers),
             TweetsRecieved = maps:get(Username, UserRecievedTweetsMap, []),
             Pid ! {recieveQuery, TweetsRecieved},
-            engineTick(Users, NewActiveUsers, UserFollowersMap, UserRecievedTweetsMap, UserSentTweetsMap, HashTagSubscriptions);
+            engineTick(StartTime, erlang:timestamp(), TweetSent, RetweetSent, Users, NewActiveUsers, UserFollowersMap, UserRecievedTweetsMap, UserSentTweetsMap, HashTagSubscriptions);
         {logOut, Username} ->
             io:format("User logged out~n"),
             NewActiveUsers = maps:remove(Username, ActiveUsers),
-            engineTick(Users, NewActiveUsers, UserFollowersMap, UserRecievedTweetsMap, UserSentTweetsMap, HashTagSubscriptions);
+            engineTick(StartTime, erlang:timestamp(), TweetSent, RetweetSent, Users, NewActiveUsers, UserFollowersMap, UserRecievedTweetsMap, UserSentTweetsMap, HashTagSubscriptions);
         {followUser, MyUsername, FollowThisUsername} ->
             io:format("User followed user~n"),
             UserFollowersEntry = maps:get(FollowThisUsername, UserFollowersMap, []),
             NewUserFollowersMap = maps:put(FollowThisUsername, [MyUsername | UserFollowersEntry], UserFollowersMap),
-            engineTick(Users, ActiveUsers, NewUserFollowersMap, UserRecievedTweetsMap, UserSentTweetsMap, HashTagSubscriptions);
+            engineTick(StartTime, erlang:timestamp(), TweetSent, RetweetSent, Users, ActiveUsers, NewUserFollowersMap, UserRecievedTweetsMap, UserSentTweetsMap, HashTagSubscriptions);
         {followHashTag, MyUsername, HashTag} ->
             io:format("User followed hashtag~n"),
             HashTagsEntry = maps:get(HashTag, HashTagSubscriptions, []),
             NewHashTagSubscriptions = maps:put(HashTag, [MyUsername | HashTagsEntry], HashTagSubscriptions),
-            engineTick(Users, ActiveUsers, UserFollowersMap, UserRecievedTweetsMap, UserSentTweetsMap, NewHashTagSubscriptions);
+            engineTick(StartTime, erlang:timestamp(), TweetSent, RetweetSent, Users, ActiveUsers, UserFollowersMap, UserRecievedTweetsMap, UserSentTweetsMap, NewHashTagSubscriptions);
         % Tweet: text, hashtags, mentions, originalTweeter, actualTweeter
         {sendTweet, Username, Tweet} ->
             io:format("Receved new tweet~n"),
@@ -79,9 +88,13 @@ engineTick(Users, ActiveUsers, UserFollowersMap, UserRecievedTweetsMap, UserSent
             NewUserRecievedTweetsMap = updateRecievedTweetMap(Tweet, UserRecievedTweetsMap, AllUsersNeedingTweet),
             
             spawn(engine, sendLiveTweets, [Tweet, ActiveUsers, AllUsersNeedingTweet]),
-            engineTick(Users, ActiveUsers, UserFollowersMap, NewUserRecievedTweetsMap, NewUserSentTweetsMap, HashTagSubscriptions);
-        _ ->
-            io:format("i got something~n")
+
+            if
+                Tweet#tweet.actualTweeter == Tweet#tweet.originalTweeter ->
+                    engineTick(StartTime, erlang:timestamp(), TweetSent + 1, RetweetSent + 1, Users, ActiveUsers, UserFollowersMap, NewUserRecievedTweetsMap, NewUserSentTweetsMap, HashTagSubscriptions);
+                true ->
+                    engineTick(StartTime, erlang:timestamp(), TweetSent + 1, RetweetSent, Users, ActiveUsers, UserFollowersMap, NewUserRecievedTweetsMap, NewUserSentTweetsMap, HashTagSubscriptions)
+            end
     end.
 
 sendLiveTweets(Tweet, ActiveUsers, []) ->

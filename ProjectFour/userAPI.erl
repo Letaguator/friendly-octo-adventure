@@ -2,16 +2,15 @@
 -module(userAPI).
 -include("records.hrl"). 
 
--export([server_node/0, spawnClient/1, query/1, register/0, reTweet/4, logIn/1, logOut/0, sendTweet/3, client/2, client/3, followUser/1, reg/1, followHashTag/1]).
+-export([query/1, register/0, reTweet/4, logIn/1, logOut/0, sendTweet/3, client/2, client/3, followUser/1, reg/1, followHashTag/1]).
 
 
 server_node() ->
     'master@LAPTOP-M9SIRB3U'.
-    %'mast@Laptop-Waldur'.
+    % 'mast@Laptop-Waldur'.
 
 
-%% NOT IN USE
-%% NOT IN USE
+
 register() ->
     case whereis(mess_client) of % Test if the client is running
         undefined ->
@@ -21,17 +20,18 @@ register() ->
             mess_client ! {register},
             ok
     end.
-%% NOT IN USE
-%% NOT IN USE
 
 
 
-%% NOT IN USE
-%% NOT IN USE
 reTweet(Message, Hashtags, Mentions, OG) ->    
-    mess_client ! {sendTweet, Message, Hashtags, Mentions, OG}.
-%% NOT IN USE
-%% NOT IN USE
+    case whereis(mess_client) of % Test if the client is running
+        undefined ->
+            not_logged_on;
+        _ -> 
+            mess_client ! {sendTweet, Message, Hashtags, Mentions, OG},
+            ok
+    end.
+
 
 printList([]) ->
     done;
@@ -47,65 +47,94 @@ printQuery([Head | Tail]) ->
     printQuery(Tail).
 
 printTweet(Tweet) ->
-    io:format("~s recieved tweet~n", [Tweet#tweet.actualTweeter]),
+    io:format("~s tweeted: ~n", [Tweet#tweet.actualTweeter]),
     io:format("Originally posted by ~s~n", [Tweet#tweet.originalTweeter]),
-    % io:format("#"),
-    % printList(Tweet#tweet.hashTags),
-    % io:format("~n"),
-    % io:format("@"),
-    % printList(Tweet#tweet.mentions),
-    %io:format("~n"),           
-    %io:format("~s~n", [Tweet#tweet.text]).
+    io:format("#"),
+    printList(Tweet#tweet.hashTags),
+    io:format("~n"),
+    io:format("@"),
+    printList(Tweet#tweet.mentions),
+    io:format("~n"),           
+    io:format("~s~n", [Tweet#tweet.text]).
 
 printTweet(Username, Tweet) ->
-    io:format("~s recieved tweet: ~s from ~s ~n", [Username, Tweet#tweet.text, Tweet#tweet.actualTweeter]).
-    % io:format("Originally posted by ~s~n", [Tweet#tweet.originalTweeter]),
-    % io:format("#"),
-    % printList(Tweet#tweet.hashTags),
-    % io:format("~n"),
-    % io:format("@"),
-    % printList(Tweet#tweet.mentions),
-    % io:format("~n"),           
-    % io:format("~s~n", [Tweet#tweet.text]).
+    io:format("~s recieved: ~n", [Username]),
+    io:format("~s tweeted: ~n", [Tweet#tweet.actualTweeter]),
+    io:format("Originally posted by ~s~n", [Tweet#tweet.originalTweeter]),
+    io:format("#"),
+    printList(Tweet#tweet.hashTags),
+    io:format("~n"),
+    io:format("@"),
+    printList(Tweet#tweet.mentions),
+    io:format("~n"),           
+    io:format("~s~n", [Tweet#tweet.text]).
 
-%% NOT IN USE
-%% NOT IN USE
-%% NOT IN USE
-%% NOT IN USE
-%% NOT IN USE
-spawnClient(Username) -> 
-    spawn(user, client, [server_node(), Username]).
 
 reg(UserName) ->
     {engine, server_node()} ! {register, UserName}.
 
-%% User Commands
+
+%%% User Commands
 logIn(UserName) ->
-    {engine, server_node()} ! {logIn, UserName, whereis(mess_client)}.
+    case whereis(mess_client) of
+        undefined ->
+            register(mess_client, spawn(userAPI, client, [server_node(), UserName]));
+        _ -> 
+            {engine, server_node()} ! {logIn, UserName, whereis(mess_client)}
+    end.
 
 query(UserName) ->
-    {engine, server_node()} ! {query, UserName, whereis(mess_client)}.
+    case whereis(mess_client) of
+        undefined ->
+            register(mess_client, spawn(userAPI, client, [server_node(), UserName]));
+        _ -> 
+            {engine, server_node()} ! {query, UserName, whereis(mess_client)}
+    end.
 
 logOut() ->
     mess_client ! logOut.
 
+
+
 sendTweet(Message, Hashtags, Mentions) ->
-    mess_client ! {sendTweet, Message, Hashtags, Mentions}.
+    case whereis(mess_client) of % Test if the client is running
+        undefined ->
+            not_logged_on;
+        _ -> 
+            mess_client ! {sendTweet, Message, Hashtags, Mentions},
+            ok
+    end.
 
 followUser(FollowThisUsername) ->
-    mess_client ! {followUser, FollowThisUsername}.
+    case whereis(mess_client) of % Test if the client is running
+        undefined ->
+            not_logged_on;
+        _ -> 
+            mess_client ! {followUser, FollowThisUsername},
+            ok
+    end.   
 
 followHashTag(FollowThisHashTag) ->
-    mess_client ! {followHashTag, FollowThisHashTag}.
+    case whereis(mess_client) of % Test if the client is running
+        undefined ->
+            not_logged_on;
+        _ -> 
+            mess_client ! {followHashTag, FollowThisHashTag},
+            ok
+    end. 
+    
 
 %%% The client process which runs on each client node
 client(Server_Node, UserName) ->
+
     {engine, Server_Node} ! {logIn, UserName, self()},
     io:format("login information sent~n"),
     client(Server_Node, UserName, running).
 
 client(Server_Node, UserName, running) ->
     receive
+        register ->
+            {engine, Server_Node} ! {register, UserName};
         logOut ->
             {engine, Server_Node} ! {logOut, UserName},
             exit(normal);
@@ -116,7 +145,6 @@ client(Server_Node, UserName, running) ->
             Tweet = #tweet{text = Message, hashTags = Hashtags, mentions = Mentions, originalTweeter = UserName, actualTweeter = UserName},
             {engine, Server_Node} ! {sendTweet, UserName, Tweet};
         {followUser, FollowThisUsername} ->
-            io:format("~w ~w ~n", [UserName, FollowThisUsername]),
             {engine, Server_Node} ! {followUser, UserName, FollowThisUsername};
         {followHashTag, FollowThisHashTag} ->
             {engine, Server_Node} ! {followHashTag, UserName, FollowThisHashTag};
@@ -124,14 +152,7 @@ client(Server_Node, UserName, running) ->
             printTweet(UserName, Tweet);
         {recieveQuery, Query} ->
             % Forward to sim last tweet
+
             printQuery(Query)
     end,
     client(Server_Node, UserName, running).
-
-
-%% NOT IN USE
-%% NOT IN USE
-%% NOT IN USE
-%% NOT IN USE
-%% NOT IN USE
-%% NOT IN USE

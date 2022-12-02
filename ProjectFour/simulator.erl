@@ -2,6 +2,9 @@
 -module(simulator).
 -export([zipf/3, startSim/1, startSimLifecycle/3]).
 -include("records.hrl").
+-import(userAPI, [server_node/0, spawnClient/1, query/1, register/0, reTweet/4, logIn/1, logOut/0, sendTweet/3, client/2, client/3, followUser/1, reg/1, followHashTag/1]).
+
+
 
 % Formula from http://www.math.wm.edu/~leemis/chart/UDR/PDFs/Zipf.pdf
 % In our case x can be number of subscribers, n can be maximum amount of subscribers
