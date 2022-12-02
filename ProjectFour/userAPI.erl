@@ -1,16 +1,17 @@
 % @author Mathias Brekkan and Ruiyang Li
--module(user).
+-module(userAPI).
 -include("records.hrl"). 
 
--export([printList/1, query/1, register/0, reTweet/4, logIn/1, logOut/0, sendTweet/3, client/2, client/3, followUser/1, reg/1, followHashTag/1]).
+-export([spawnClient/1, query/1, register/0, reTweet/4, logIn/1, logOut/0, sendTweet/3, client/2, client/3, followUser/1, reg/1, followHashTag/1]).
 
 
 server_node() ->
-    'master@LAPTOP-M9SIRB3U'.
-    % 'mast@Laptop-Waldur'.
+    % 'master@LAPTOP-M9SIRB3U'.
+    'mast@Laptop-Waldur'.
 
 
-
+%% NOT IN USE
+%% NOT IN USE
 register() ->
     case whereis(mess_client) of % Test if the client is running
         undefined ->
@@ -20,18 +21,17 @@ register() ->
             mess_client ! {register},
             ok
     end.
+%% NOT IN USE
+%% NOT IN USE
 
 
 
+%% NOT IN USE
+%% NOT IN USE
 reTweet(Message, Hashtags, Mentions, OG) ->    
-    case whereis(mess_client) of % Test if the client is running
-        undefined ->
-            not_logged_on;
-        _ -> 
-            mess_client ! {sendTweet, Message, Hashtags, Mentions, OG},
-            ok
-    end.
-
+    mess_client ! {sendTweet, Message, Hashtags, Mentions, OG}.
+%% NOT IN USE
+%% NOT IN USE
 
 printList([]) ->
     done;
@@ -47,87 +47,65 @@ printQuery([Head | Tail]) ->
     printQuery(Tail).
 
 printTweet(Tweet) ->
-    io:format("~s tweeted: ~n", [Tweet#tweet.actualTweeter]),
+    io:format("~s recieved tweet~n", [Tweet#tweet.actualTweeter]),
     io:format("Originally posted by ~s~n", [Tweet#tweet.originalTweeter]),
-    io:format("#"),
-    printList(Tweet#tweet.hashTags),
-    io:format("~n"),
-    io:format("@"),
-    printList(Tweet#tweet.mentions),
+    % io:format("#"),
+    % printList(Tweet#tweet.hashTags),
+    % io:format("~n"),
+    % io:format("@"),
+    % printList(Tweet#tweet.mentions),
     io:format("~n"),           
     io:format("~s~n", [Tweet#tweet.text]).
 
 printTweet(Username, Tweet) ->
-    io:format("~s recieved: ~n", [Username]),
-    io:format("~s tweeted: ~n", [Tweet#tweet.actualTweeter]),
-    io:format("Originally posted by ~s~n", [Tweet#tweet.originalTweeter]),
-    io:format("#"),
-    printList(Tweet#tweet.hashTags),
-    io:format("~n"),
-    io:format("@"),
-    printList(Tweet#tweet.mentions),
-    io:format("~n"),           
-    io:format("~s~n", [Tweet#tweet.text]).
+    io:format("~s recieved tweet: ~s from ~s ~n", [Username, Tweet#tweet.text, Tweet#tweet.actualTweeter]).
+    % io:format("Originally posted by ~s~n", [Tweet#tweet.originalTweeter]),
+    % io:format("#"),
+    % printList(Tweet#tweet.hashTags),
+    % io:format("~n"),
+    % io:format("@"),
+    % printList(Tweet#tweet.mentions),
+    % io:format("~n"),           
+    % io:format("~s~n", [Tweet#tweet.text]).
 
+spawnClient(Username) -> 
+    spawn(user, client, [server_node(), Username]).
 
+%% NOT IN USE
+%% NOT IN USE
+%% NOT IN USE
+%% NOT IN USE
+%% NOT IN USE
 reg(UserName) ->
     {engine, server_node()} ! {register, UserName}.
 
-
-%%% User Commands
+%% User Commands
 logIn(UserName) ->
-    case whereis(mess_client) of
-        undefined ->
-            register(mess_client, spawn(user, client, [server_node(), UserName]));
-        _ -> 
-            {engine, server_node()} ! {logIn, UserName, whereis(mess_client)}
-    end.
+    {engine, server_node()} ! {logIn, UserName, whereis(mess_client)}.
 
 query(UserName) ->
-    case whereis(mess_client) of
-        undefined ->
-            register(mess_client, spawn(user, client, [server_node(), UserName]));
-        _ -> 
-            {engine, server_node()} ! {query, UserName, whereis(mess_client)}
-    end.
+    {engine, server_node()} ! {query, UserName, whereis(mess_client)}.
 
 logOut() ->
     mess_client ! logOut.
 
-
-
 sendTweet(Message, Hashtags, Mentions) ->
-    case whereis(mess_client) of % Test if the client is running
-        undefined ->
-            not_logged_on;
-        _ -> 
-            mess_client ! {sendTweet, Message, Hashtags, Mentions},
-            ok
-    end.
+    mess_client ! {sendTweet, Message, Hashtags, Mentions}.
 
 followUser(FollowThisUsername) ->
-    io:format("22222222222222222222~w ~n", [FollowThisUsername]),
-    case whereis(mess_client) of % Test if the client is running
-        undefined ->
-            not_logged_on;
-        _ -> 
-            mess_client ! {followUser, FollowThisUsername},
-            ok
-    end.   
+    mess_client ! {followUser, FollowThisUsername}.
 
 followHashTag(FollowThisHashTag) ->
-    case whereis(mess_client) of % Test if the client is running
-        undefined ->
-            not_logged_on;
-        _ -> 
-            mess_client ! {followHashTag, FollowThisHashTag},
-            ok
-    end. 
-    
+    mess_client ! {followHashTag, FollowThisHashTag}.
+%% NOT IN USE
+%% NOT IN USE
+%% NOT IN USE
+%% NOT IN USE
+%% NOT IN USE
+%% NOT IN USE
 
 %%% The client process which runs on each client node
 client(Server_Node, UserName) ->
-
     {engine, Server_Node} ! {logIn, UserName, self()},
     io:format("login information sent~n"),
     client(Server_Node, UserName, running).
