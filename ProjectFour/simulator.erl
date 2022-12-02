@@ -2,7 +2,7 @@
 -module(simulator).
 -export([zipf/3, startSim/1, startSimLifecycle/3]).
 -include("records.hrl"). 
--import(user, [query/1, register/0, reTweet/4, logIn/1, logOut/0, sendTweet/3, client/2, client/3, followUser/1, reg/1, followHashTag/1]).
+-import(userAPI, [spawnClient/1, query/1, register/0, reTweet/4, logIn/1, logOut/0, sendTweet/3, client/2, client/3, followUser/1, reg/1, followHashTag/1]).
 
 % Formula from http://www.math.wm.edu/~leemis/chart/UDR/PDFs/Zipf.pdf
 % In our case x can be number of subscribers, n can be maximum amount of subscribers
@@ -72,43 +72,52 @@ startUsers([CurrentUser | UsernamesLeft], SubscriberMap) ->
     spawn(simulator, startSimLifecycle, [Username, UserPop, UsersToSubscribeTo]),
     startUsers(UsernamesLeft, SubscriberMap).
 
-subscribeToAllDesignatedUsers(_, []) ->
+subscribeToAllDesignatedUsers(_, _, []) ->
     ok;
-subscribeToAllDesignatedUsers(Username, [UserToFollow | UsersLeftToFollow]) ->
-    followUser(UserToFollow),
+subscribeToAllDesignatedUsers(ClientID, Username, [UserToFollow | UsersLeftToFollow]) ->
+    % followUser(UserToFollow),
+    {engine, server_node()} ! {followUser, Username, UserToFollow},
     io:format("~s~n", [UserToFollow]),
-    subscribeToAllDesignatedUsers(Username, UsersLeftToFollow).
+    subscribeToAllDesignatedUsers(ClientID, Username, UsersLeftToFollow).
+
+server_node() ->
+    % 'master@LAPTOP-M9SIRB3U'.
+    'slave@Laptop-Waldur'.
 
 % register/0, reTweet/4, logIn/1, logOut/0, sendTweet/3, client/2, client/3, followUser/1, reg/1, followHashTag/1
 startSimLifecycle(Username, UserPop, SubscriberList) ->
-    reg(Username),
-    logIn(Username),
-    subscribeToAllDesignatedUsers(Username, SubscriberList),
-    simLifecycle(Username, UserPop).
-simLifecycle(Username, UserPop) ->
+    ClientID = spawnClient(Username),
+    %reg(Username),
+    {engine, server_node()} ! {register, Username},
+    % logIn(Username),
+    {engine, server_node()} ! {logIn, Username, ClientID},
+    subscribeToAllDesignatedUsers(ClientID, Username, SubscriberList),
+    simLifecycle(ClientID, Username, UserPop).
+simLifecycle(ClientID, Username, UserPop) ->
     LogOutProb = random:uniform(),
     if
         LogOutProb < UserPop/5 ->
-            logOut(),
+            {engine, server_node()} ! {logOut, Username},
             SleepTime = round(50000 * random:uniform() * (1 - UserPop)),
             timer:sleep(SleepTime),
-            logIn(Username);
+            {engine, server_node()} ! {logIn, Username, ClientID};
         true ->
             ok
     end,
-
+    io:write(UserPop),
     timer:sleep(1000),
     TweetProbability = random:uniform(),
     if
         TweetProbability < UserPop ->
-            sendTweet("Message", [], []);
+            Tweet = #tweet{text = getRandomString(5), hashTags = [], mentions = [], originalTweeter = Username, actualTweeter = Username},
+            {engine, server_node()} ! {sendTweet, Username, Tweet};
         true ->
             ok
     end,
     
     % send retweets periodically
 
-    simLifecycle(Username, UserPop).
+    simLifecycle(ClientID, Username, UserPop).
 % For every user with subscriber S, make S users take their username as input for subscription
 % Give every user a online/offline behaviour, determining how often they connect/disconnect, zipf
 % Give every user a tweet frequency rate, the higher the subscriber count S, the higher the rate TFR, zipf
