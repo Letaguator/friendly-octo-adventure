@@ -2,7 +2,7 @@
 -module(simulator).
 -export([zipf/3, startSim/1, startSimLifecycle/3]).
 -include("records.hrl"). 
--import(user, [query/1, register/0, reTweet/4, logIn/1, logOut/0, sendTweet/3, client/2, client/3, followUser/1, reg/1, followHashTag/1]).
+-import(user, [printList/1, query/1, register/0, reTweet/4, logIn/1, logOut/0, sendTweet/3, client/2, client/3, followUser/1, reg/1, followHashTag/1]).
 
 % Formula from http://www.math.wm.edu/~leemis/chart/UDR/PDFs/Zipf.pdf
 % In our case x can be number of subscribers, n can be maximum amount of subscribers
@@ -59,6 +59,7 @@ findSubscribersForUser(CurrentUsername, Users, IndexToFetchUsersFrom, TotalSubsc
     end.
 
 startSim(NumberOfUsers) ->
+
     Usernames = getUsernamesList(NumberOfUsers, [], NumberOfUsers),
     SubscriberMap = allocateSubscribers(Usernames, Usernames, NumberOfUsers, #{}),
     startUsers(Usernames, SubscriberMap).
@@ -75,12 +76,16 @@ startUsers([CurrentUser | UsernamesLeft], SubscriberMap) ->
 subscribeToAllDesignatedUsers(_, []) ->
     ok;
 subscribeToAllDesignatedUsers(Username, [UserToFollow | UsersLeftToFollow]) ->
+    io:format("~w ", [Username]),
     followUser(UserToFollow),
-    io:format("~s~n", [UserToFollow]),
+    %io:format("||| ~s subscribed to ", [Username]),
+    %io:format("~s~n", [UserToFollow]),
     subscribeToAllDesignatedUsers(Username, UsersLeftToFollow).
 
 % register/0, reTweet/4, logIn/1, logOut/0, sendTweet/3, client/2, client/3, followUser/1, reg/1, followHashTag/1
 startSimLifecycle(Username, UserPop, SubscriberList) ->
+    
+    %io:format("~w ~w ~n", [Username, SubscriberList]),
     reg(Username),
     logIn(Username),
     subscribeToAllDesignatedUsers(Username, SubscriberList),
@@ -101,7 +106,9 @@ simLifecycle(Username, UserPop) ->
     TweetProbability = random:uniform(),
     if
         TweetProbability < UserPop ->
+            
             sendTweet("Message", [], []);
+
         true ->
             ok
     end,

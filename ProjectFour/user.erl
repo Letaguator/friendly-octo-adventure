@@ -2,7 +2,7 @@
 -module(user).
 -include("records.hrl"). 
 
--export([query/1, register/0, reTweet/4, logIn/1, logOut/0, sendTweet/3, client/2, client/3, followUser/1, reg/1, followHashTag/1]).
+-export([printList/1, query/1, register/0, reTweet/4, logIn/1, logOut/0, sendTweet/3, client/2, client/3, followUser/1, reg/1, followHashTag/1]).
 
 
 server_node() ->
@@ -106,6 +106,7 @@ sendTweet(Message, Hashtags, Mentions) ->
     end.
 
 followUser(FollowThisUsername) ->
+    io:format("22222222222222222222~w ~n", [FollowThisUsername]),
     case whereis(mess_client) of % Test if the client is running
         undefined ->
             not_logged_on;
@@ -133,8 +134,6 @@ client(Server_Node, UserName) ->
 
 client(Server_Node, UserName, running) ->
     receive
-        register ->
-            {engine, Server_Node} ! {register, UserName};
         logOut ->
             {engine, Server_Node} ! {logOut, UserName},
             exit(normal);
@@ -145,6 +144,7 @@ client(Server_Node, UserName, running) ->
             Tweet = #tweet{text = Message, hashTags = Hashtags, mentions = Mentions, originalTweeter = UserName, actualTweeter = UserName},
             {engine, Server_Node} ! {sendTweet, UserName, Tweet};
         {followUser, FollowThisUsername} ->
+            io:format("~w ~w ~n", [UserName, FollowThisUsername]),
             {engine, Server_Node} ! {followUser, UserName, FollowThisUsername};
         {followHashTag, FollowThisHashTag} ->
             {engine, Server_Node} ! {followHashTag, UserName, FollowThisHashTag};
@@ -152,7 +152,6 @@ client(Server_Node, UserName, running) ->
             printTweet(UserName, Tweet);
         {recieveQuery, Query} ->
             % Forward to sim last tweet
-
             printQuery(Query)
     end,
     client(Server_Node, UserName, running).

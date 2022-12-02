@@ -15,14 +15,12 @@
 
 startEngine() ->
     io:fwrite("Starting engine~n"),
-    Pid = spawn(engine, engineTick, [#{}, #{}, #{}, #{}, #{}, #{}]),
-    io:format("~w~n", [Pid]),
-    register(engine, Pid).
+    register(engine, spawn(engine, engineTick, [#{}, #{}, #{}, #{}, #{}, #{}])).
 
 engineTick(Users, ActiveUsers, UserFollowersMap, UserRecievedTweetsMap, UserSentTweetsMap, HashTagSubscriptions) ->
     % io:format("Users: ~w~n", [Users]),
     io:format("ActiveUsers: ~w~n", [maps:size(ActiveUsers)]),
-    % io:format("UserFollowersMaps: ~w~n", [UserFollowersMap]),
+    io:format("UserFollowersMaps: ~w~n", [UserFollowersMap]),
     % io:format("HashTagSubscriptions: ~w~n", [HashTagSubscriptions]),
     receive
         {register, Username} ->
@@ -81,7 +79,9 @@ engineTick(Users, ActiveUsers, UserFollowersMap, UserRecievedTweetsMap, UserSent
             NewUserRecievedTweetsMap = updateRecievedTweetMap(Tweet, UserRecievedTweetsMap, AllUsersNeedingTweet),
             
             spawn(engine, sendLiveTweets, [Tweet, ActiveUsers, AllUsersNeedingTweet]),
-            engineTick(Users, ActiveUsers, UserFollowersMap, NewUserRecievedTweetsMap, NewUserSentTweetsMap, HashTagSubscriptions)
+            engineTick(Users, ActiveUsers, UserFollowersMap, NewUserRecievedTweetsMap, NewUserSentTweetsMap, HashTagSubscriptions);
+        _ ->
+            io:format("i got something~n")
     end.
 
 sendLiveTweets(Tweet, ActiveUsers, []) ->
