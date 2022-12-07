@@ -62,7 +62,6 @@ engineTick(StartTime, CurTime, TweetSent, RetweetSent, Users, ActiveUsers, UserF
             HashTagsEntry = maps:get(HashTag, HashTagSubscriptions, []),
             NewHashTagSubscriptions = maps:put(HashTag, [MyUsername | HashTagsEntry], HashTagSubscriptions),
             engineTick(StartTime, erlang:timestamp(), TweetSent, RetweetSent, Users, ActiveUsers, UserFollowersMap, UserRecievedTweetsMap, UserSentTweetsMap, NewHashTagSubscriptions);
-        % Tweet: text, hashtags, mentions, originalTweeter, actualTweeter
         {sendTweet, Username, Tweet} ->
             io:format("Receved new tweet~n"),
             TweetsSentByUser = maps:get(Username, UserSentTweetsMap, []),
@@ -70,19 +69,7 @@ engineTick(StartTime, CurTime, TweetSent, RetweetSent, Users, ActiveUsers, UserF
             Followers = maps:get(Username, UserFollowersMap, []),
             MentionedUsers = Tweet#tweet.mentions,
             FollowersOfHashTags = getAllUsersFromHashTags(HashTagSubscriptions, Tweet#tweet.hashTags, []),
-            % io:fwrite("\n"),
-            % io:fwrite("\n"),
-            % io:write(Followers),
-            % io:fwrite("\n"),
-            % io:write(MentionedUsers),
-            % io:fwrite("\n"),
-            % io:write(FollowersOfHashTags),
-            % io:fwrite("\n"),
-            % io:write([Tweet#tweet.originalTweeter, Tweet#tweet.actualTweeter]),
-            % io:fwrite("\n"),
-            % io:fwrite("\n"),
             AllUsersNeedingTweetRaw = Followers ++ MentionedUsers ++ FollowersOfHashTags ++ [Tweet#tweet.originalTweeter, Tweet#tweet.actualTweeter],
-            % io:write(AllUsersNeedingTweetRaw),
             AllUsersNeedingTweet = sets:to_list(sets:from_list(AllUsersNeedingTweetRaw)),
             
             NewUserRecievedTweetsMap = updateRecievedTweetMap(Tweet, UserRecievedTweetsMap, AllUsersNeedingTweet),
