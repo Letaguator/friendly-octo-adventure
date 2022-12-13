@@ -96,8 +96,14 @@
                         const tweetDiv = document.createElement("div");
                         const messageDiv = document.createElement("div");
                         const authorDiv = document.createElement("div");
+                        const retweetButton = document.createElement("button");
+                        retweetButton.innerHTML = "Retweet";
+                        retweetButton.onclick = (e) => {
+                            sendTweet(usernameLoggedIn, originalTweeter, whispherText);
+                        };
                         tweetDiv.appendChild(authorDiv);
                         tweetDiv.appendChild(messageDiv);
+                        tweetDiv.appendChild(retweetButton);
 
                         messageDiv.innerHTML = text;
                         
@@ -159,8 +165,13 @@
         writeWispherButton.onclick = (e) =>
         {
             const whispherText = wispherInput.value;
+            sendTweet(usernameLoggedIn, usernameLoggedIn, whispherText);
             wispherInput.value = "";
-            socket.send("sendTweet|"+ usernameLoggedIn + "|" + usernameLoggedIn +"|" + whispherText);
         };
+
+        function sendTweet(actualTweeter, originalTweeter, whispherText)
+        {
+            socket.send("sendTweet|"+ actualTweeter + "|" + originalTweeter +"|" + whispherText);
+        }
     </script>
 </html>
