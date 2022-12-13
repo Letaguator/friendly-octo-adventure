@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>BirdView</title>
+        <style>
+            #header
+            {
+                background-color: skyblue;
+                display: flex;
+                flex: row;
+            }
+
+            #wisphersDiv div {
+                border: 1px solid lightseagreen;
+                border-radius: 6px;
+                background-color: lightskyblue;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="header">
+            <h1>BirdView</h1>
+            <input id="usernameInput" type="text" placeholder="Username" />
+            <button id="registerButton">Register</button>
+            <button id="logInButton">Log In</button>
+            <button id="logOutButton">Log Out</button>
+        </div>
+        <div>
+            <h2>Write Wispher</h2>
+            <input id="wispherInput" type="text" placeholder="Write a Wispher.." />
+            <button id="writeWispherButton">Wispher</button>
+        </div>
+        <div>
+            <h2>Follow Hashtags</h2>
+            <input id="followHashtagInput" type="text" placeholder="Hashtag" />
+            <button id="followHashtagButton">Follow Hashtag</button>
+            <div></div>
+        </div>
+        <div>
+            <h2>Following</h2>
+            <input id="followUserInput" type="text" placeholder="Username" />
+            <button id="followUserButton">Follow User</button>
+            <div></div>
+        </div>
+        <div>
+            <h2>Bird Wisphers</h2>
+            <div id="wisphersDiv"></div>
+        </div>
+
+    </body>
+    <script>
+        // Handle pinging server
+
+        const wisphersDiv = document.getElementById("wisphersDiv");
+        const usernameInput = document.getElementById("usernameInput");
+        const wispherInput = document.getElementById("wispherInput");
+        const followUserInput = document.getElementById("followUserInput");
+        const followHashtagInput = document.getElementById("followHashtagInput");
+
+        const writeWispherButton = document.getElementById("writeWispherButton");
+        const registerButton = document.getElementById("registerButton");
+        const followUserButton = document.getElementById("followUserButton");
+        const followHashtagButton = document.getElementById("followHashtagButton");
+        const logInButton = document.getElementById("logInButton");
+        const logOutButton = document.getElementById("logOutButton");
+
+        let usernameLoggedIn = null;
+
+        let socket = new WebSocket('ws://localhost:8080/websocket');
+        socket.addEventListener('open', (event) => {
+            socket.send('Hello Server!');
+        });
+
+        socket.addEventListener('close', (event) => {
+            logOut();
+        });
+        
+        socket.addEventListener('message', (event) => {
+            console.log('Message from server ', event.data);
+            console.log(event)
+            const message = event.data;
+            if(message.includes("^")) // Tweets sent from server
+            {
+                const tweets = message.split("^");
+                for(let i in tweets)
+                {
+                    const rawTweet = tweets[i];
+                    if(rawTweet !== "")
+                    {
+                        console.log(rawTweet)
+                        const splitTweet = rawTweet.split("|");
+                        const actualTweeter = splitTweet[0];
+                        const originalTweeter = splitTweet[1];
+                        const text = splitTweet[2];
+                        
+                        const tweetDiv = document.createElement("div");
+                        const messageDiv = document.createElement("div");
+                        const authorDiv = document.createElement("div");
+                        tweetDiv.appendChild(authorDiv);
+                        tweetDiv.appendChild(messageDiv);
+
+                        messageDiv.innerHTML = text;
+                        
+                        if(actualTweeter === originalTweeter)
+                            authorDiv.innerHTML = "Tweet by " + originalTweeter;
+                        else
+                            authorDiv.innerHTML = "Retweet by " + actualTweeter + ", Originally posted by " + originalTweeter;
+                            wisphersDiv.appendChild(tweetDiv);
+                    }
+                }
+            }
+        });
+
+        registerButton.onclick = (e) =>
+        {
+            socket.send("register|" + usernameInput.value);
+            usernameInput.value = "";
+        };
+
+        followUserButton.onclick = (e) =>
+        {
+            socket.send("followUser|" + usernameLoggedIn + "|" + followUserInput.value);
+            followUserInput.value = "";
+        };
+
+        followHashtagButton.onclick = (e) =>
+        {
+            socket.send("followHashtag|" + usernameLoggedIn + "|" + followHashtagInput.value);
+            followHashtagInput.value = "";
+        };
+
+        logInButton.onclick = (e) =>
+        {
+            logInButton.style.visibility = "hidden";
+            registerButton.style.visibility = "hidden";
+            usernameInput.style.visibility = "hidden";
+            logOutButton.style.visibility = "visible";
+            usernameLoggedIn = usernameInput.value
+            usernameInput.value = "";
+            socket.send("logIn|" + usernameLoggedIn);
+        };
+
+        logOutButton.style.visibility = "hidden";
+        logOutButton.onclick = (e) =>
+        {
+            logOut();
+        };
+
+        function logOut()
+        {
+            logInButton.style.visibility = "visible";
+            registerButton.style.visibility = "visible";
+            usernameInput.style.visibility = "visible";
+            logOutButton.style.visibility = "hidden";
+            socket.send("logOut|" + usernameLoggedIn);
+            socket = new WebSocket('ws://localhost:8080/websocket');
+        }
+
+        writeWispherButton.onclick = (e) =>
+        {
+            const whispherText = wispherInput.value;
+            wispherInput.value = "";
+            socket.send("sendTweet|"+ usernameLoggedIn + "|" + usernameLoggedIn +"|" + whispherText);
+        };
+    </script>
+</html>
