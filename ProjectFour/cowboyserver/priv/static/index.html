@@ -14,12 +14,14 @@
                 border: 1px solid lightseagreen;
                 border-radius: 6px;
                 background-color: lightskyblue;
+                margin: 4px;
             }
         </style>
     </head>
     <body>
         <div id="header">
             <h1>BirdView</h1>
+            <h1 id="currentUserText"></h1>
             <input id="usernameInput" type="text" placeholder="Username" />
             <button id="registerButton">Register</button>
             <button id="logInButton">Log In</button>
@@ -51,6 +53,8 @@
     <script>
         // Handle pinging server
 
+        const currentUserText = document.getElementById("currentUserText");
+
         const wisphersDiv = document.getElementById("wisphersDiv");
         const usernameInput = document.getElementById("usernameInput");
         const wispherInput = document.getElementById("wispherInput");
@@ -67,6 +71,16 @@
         let usernameLoggedIn = null;
 
         let socket = new WebSocket('ws://localhost:8080/websocket');
+
+        setInterval(keepAlive, 2000);
+        function keepAlive()
+        {
+            if(socket.readyState == WebSocket.OPEN)
+            {
+                socket.send("Ping");
+            }
+        }
+
         socket.addEventListener('open', (event) => {
             socket.send('Hello Server!');
         });
@@ -77,8 +91,8 @@
         
         socket.addEventListener('message', (event) => {
             console.log('Message from server ', event.data);
-            console.log(event)
             const message = event.data;
+            const initalFetch = wisphersDiv.childNodes.length == 0;
             if(message.includes("^")) // Tweets sent from server
             {
                 const tweets = message.split("^");
@@ -87,7 +101,6 @@
                     const rawTweet = tweets[i];
                     if(rawTweet !== "")
                     {
-                        console.log(rawTweet)
                         const splitTweet = rawTweet.split("|");
                         const actualTweeter = splitTweet[0];
                         const originalTweeter = splitTweet[1];
@@ -99,19 +112,22 @@
                         const retweetButton = document.createElement("button");
                         retweetButton.innerHTML = "Retweet";
                         retweetButton.onclick = (e) => {
-                            sendTweet(usernameLoggedIn, originalTweeter, whispherText);
+                            sendTweet(usernameLoggedIn, originalTweeter, text);
                         };
                         tweetDiv.appendChild(authorDiv);
                         tweetDiv.appendChild(messageDiv);
                         tweetDiv.appendChild(retweetButton);
 
                         messageDiv.innerHTML = text;
-                        
-                        if(actualTweeter === originalTweeter)
+                        if(actualTweeter === originalTweeter && initalFetch == false)
                             authorDiv.innerHTML = "Tweet by " + originalTweeter;
                         else
                             authorDiv.innerHTML = "Retweet by " + actualTweeter + ", Originally posted by " + originalTweeter;
-                            wisphersDiv.appendChild(tweetDiv);
+                    1   
+                    if(wisphersDiv.childNodes.length == 0)                        
+                        wisphersDiv.appendChild(tweetDiv);
+                    else
+                        wisphersDiv.insertBefore(tweetDiv, wisphersDiv.childNodes[0]);
                     }
                 }
             }
@@ -142,6 +158,7 @@
             usernameInput.style.visibility = "hidden";
             logOutButton.style.visibility = "visible";
             usernameLoggedIn = usernameInput.value
+            currentUserText.innerHTML = ": " + usernameLoggedIn;
             usernameInput.value = "";
             socket.send("logIn|" + usernameLoggedIn);
         };
@@ -159,6 +176,12 @@
             usernameInput.style.visibility = "visible";
             logOutButton.style.visibility = "hidden";
             socket.send("logOut|" + usernameLoggedIn);
+            usernameLoggedIn = "";
+            currentUserText.innerHTML = "";
+            while(wisphersDiv.firstChild)
+            {
+                wisphersDiv.removeChild(wisphersDiv.firstChild);
+            }
             socket = new WebSocket('ws://localhost:8080/websocket');
         }
 
