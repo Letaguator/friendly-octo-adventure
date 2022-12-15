@@ -3,18 +3,59 @@
     <head>
         <title>BirdView</title>
         <style>
+            body {
+                margin: 0;
+            }
+
             #header
             {
-                background-color: skyblue;
+                background-color: deepskyblue;
                 display: flex;
                 flex: row;
             }
 
-            #wisphersDiv div {
-                border: 1px solid lightseagreen;
-                border-radius: 6px;
-                background-color: lightskyblue;
+            #followDiv
+            {
+                display: flex;
+                flex: row;
+            }
+
+            #wispherOuterDiv
+            {
+                display: flex;
+                flex: row;
+            }
+
+            #wisphersQueryContainerDiv
+            {
+                border: 1px solid deepskyblue;
+                border-radius: 4px;
                 margin: 4px;
+                padding: 4px;
+                flex-grow: 2;
+            }
+
+            #wisphersContainerDiv
+            {
+                border: 1px solid deepskyblue;
+                border-radius: 4px;
+                margin: 4px;
+                padding: 4px;
+                flex-grow: 8;
+            }
+
+            .tweetDiv {
+                border: 2px solid lightseagreen;
+                background-color: lightskyblue;
+                border-radius: 6px;
+                margin: 4px;
+            }
+
+            button
+            {
+                border-radius: 4px;
+                padding: 4px;
+                background-color: lightsteelblue;
             }
         </style>
     </head>
@@ -27,50 +68,72 @@
             <button id="logInButton">Log In</button>
             <button id="logOutButton">Log Out</button>
         </div>
-        <div>
-            <h2>Write Wispher</h2>
-            <input id="wispherInput" type="text" placeholder="Write a Wispher.." />
-            <button id="writeWispherButton">Wispher</button>
-        </div>
-        <div>
-            <h2>Follow Hashtags</h2>
-            <input id="followHashtagInput" type="text" placeholder="Hashtag" />
-            <button id="followHashtagButton">Follow Hashtag</button>
-            <div></div>
-        </div>
-        <div>
-            <h2>Following</h2>
-            <input id="followUserInput" type="text" placeholder="Username" />
-            <button id="followUserButton">Follow User</button>
-            <div></div>
-        </div>
-        <div>
-            <h2>Bird Wisphers</h2>
-            <div id="wisphersDiv"></div>
-        </div>
+        <div id="appContentDiv">
+            <div>
+                <h2>Write Wispher</h2>
+                <input id="wispherInput" type="text" placeholder="Write a Wispher.." />
+                <button id="writeWispherButton">Wispher</button>
+            </div>
+            <div>
+                <h2>Follow</h2>
+                <div id="followDiv">
+                    <div>
+                        <input id="followHashtagInput" type="text" placeholder="Hashtag" />
+                        <button id="followHashtagButton">Follow Hashtag</button>
+                    </div>
+                    
+                    <div>
+                        <input id="followUserInput" type="text" placeholder="Username" />
+                        <button id="followUserButton">Follow User</button>
+                    </div>
+                </div>
+            </div>
+            <div id="wispherOuterDiv">
+                <div id="wisphersContainerDiv">
+                    <h2>Bird Wisphers</h2>
+                    <div id="wisphersDiv"></div>
+                </div>
 
+                <div id="wisphersQueryContainerDiv">
+                    <h2>Query Bird Wisphers</h2>
+        
+                    <input id="queryTypeMentionInput" checked type="radio" name="queryType" value="mentions"/>
+                    <label for="queryTypeMentionInput">Mentions</label>
+                    <input id="queryTypeHashtagInput" type="radio" name="queryType" value="hashtagTweets"/>
+                    <label for="queryTypeHashtagInput">Hashtag</label>
+        
+                    <input id="queryDataInput" type="text" placeholder="Query value"/>
+                    <button id="queryButton">Query</button>
+                    <div id="wisphersQueryDiv"></div>
+                </div>
+            </div>
+        </div>
     </body>
     <script>
-        // Handle pinging server
-
         const currentUserText = document.getElementById("currentUserText");
 
+        const appContentDiv = document.getElementById("appContentDiv");
         const wisphersDiv = document.getElementById("wisphersDiv");
+        const wisphersQueryDiv = document.getElementById("wisphersQueryDiv");
+        
         const usernameInput = document.getElementById("usernameInput");
         const wispherInput = document.getElementById("wispherInput");
         const followUserInput = document.getElementById("followUserInput");
         const followHashtagInput = document.getElementById("followHashtagInput");
-
+        const queryTypeMentionInput = document.getElementById("queryTypeMentionInput");
+        const queryDataInput = document.getElementById("queryDataInput");
+        
         const writeWispherButton = document.getElementById("writeWispherButton");
         const registerButton = document.getElementById("registerButton");
         const followUserButton = document.getElementById("followUserButton");
         const followHashtagButton = document.getElementById("followHashtagButton");
+        const queryButton = document.getElementById("queryButton");
         const logInButton = document.getElementById("logInButton");
         const logOutButton = document.getElementById("logOutButton");
 
         let usernameLoggedIn = null;
 
-        let socket = new WebSocket('ws://localhost:8080/websocket');
+        const socket = new WebSocket('ws://localhost:8080/websocket');
 
         setInterval(keepAlive, 2000);
         function keepAlive()
@@ -96,6 +159,14 @@
             if(message.includes("^")) // Tweets sent from server
             {
                 const tweets = message.split("^");
+                const messageType = tweets.shift(); // First element in tweet array is type of query
+                
+                if(messageType !== "queryMyUser")
+                {
+                    while(wisphersQueryDiv.firstChild)
+                        wisphersQueryDiv.removeChild(wisphersQueryDiv.firstChild);
+                }
+
                 for(let i in tweets)
                 {
                     const rawTweet = tweets[i];
@@ -107,6 +178,8 @@
                         const text = splitTweet[2];
                         
                         const tweetDiv = document.createElement("div");
+                        tweetDiv.className = "tweetDiv";
+
                         const messageDiv = document.createElement("div");
                         const authorDiv = document.createElement("div");
                         const retweetButton = document.createElement("button");
@@ -119,15 +192,22 @@
                         tweetDiv.appendChild(retweetButton);
 
                         messageDiv.innerHTML = text;
-                        if(actualTweeter === originalTweeter && initalFetch == false)
+                        if(actualTweeter === originalTweeter)
                             authorDiv.innerHTML = "Tweet by " + originalTweeter;
                         else
                             authorDiv.innerHTML = "Retweet by " + actualTweeter + ", Originally posted by " + originalTweeter;
-                    1   
-                    if(wisphersDiv.childNodes.length == 0)                        
-                        wisphersDiv.appendChild(tweetDiv);
-                    else
-                        wisphersDiv.insertBefore(tweetDiv, wisphersDiv.childNodes[0]);
+                        
+                        if(messageType === "queryMyUser")
+                        {
+                            if(wisphersDiv.childNodes.length == 0  || initalFetch)                        
+                                wisphersDiv.appendChild(tweetDiv);
+                            else
+                                wisphersDiv.insertBefore(tweetDiv, wisphersDiv.childNodes[0]);
+                        }
+                        else
+                        {
+                            wisphersQueryDiv.appendChild(tweetDiv);
+                        }
                     }
                 }
             }
@@ -151,8 +231,28 @@
             followHashtagInput.value = "";
         };
 
+        queryButton.onclick = (e) =>
+        {
+            const isMentionQuery = queryTypeMentionInput.checked;
+            const queryData = queryDataInput.value;
+
+            if(queryData === "")
+                return;
+
+            queryDataInput.value = "";
+            if(isMentionQuery)
+            {
+                socket.send("queryMention|" + usernameLoggedIn + "|" + queryData);
+            }
+            else
+            {
+                socket.send("queryHashtag|" + usernameLoggedIn + "|" + queryData);
+            }
+        };
+
         logInButton.onclick = (e) =>
         {
+            appContentDiv.style.visibility = "visible";
             logInButton.style.visibility = "hidden";
             registerButton.style.visibility = "hidden";
             usernameInput.style.visibility = "hidden";
@@ -163,6 +263,7 @@
             socket.send("logIn|" + usernameLoggedIn);
         };
 
+        appContentDiv.style.visibility = "hidden";
         logOutButton.style.visibility = "hidden";
         logOutButton.onclick = (e) =>
         {
@@ -171,6 +272,7 @@
 
         function logOut()
         {
+            appContentDiv.style.visibility = "hidden";
             logInButton.style.visibility = "visible";
             registerButton.style.visibility = "visible";
             usernameInput.style.visibility = "visible";
@@ -178,16 +280,20 @@
             socket.send("logOut|" + usernameLoggedIn);
             usernameLoggedIn = "";
             currentUserText.innerHTML = "";
+
             while(wisphersDiv.firstChild)
             {
                 wisphersDiv.removeChild(wisphersDiv.firstChild);
             }
-            socket = new WebSocket('ws://localhost:8080/websocket');
         }
 
         writeWispherButton.onclick = (e) =>
         {
             const whispherText = wispherInput.value;
+
+            if(whispherText === "")
+                return;
+
             sendTweet(usernameLoggedIn, usernameLoggedIn, whispherText);
             wispherInput.value = "";
         };

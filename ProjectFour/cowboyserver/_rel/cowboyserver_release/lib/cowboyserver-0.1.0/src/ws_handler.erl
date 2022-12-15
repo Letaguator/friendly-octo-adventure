@@ -22,7 +22,6 @@ websocket_handle(_Frame, State) ->
 handleRequestCaller(State, [ MessageType | MessageTokens]) ->
 	StrMessageType = binary_to_list(MessageType),
 	StrMessageTokens = binListToStringList([], MessageTokens),
-	printList(StrMessageTokens),
 	handleRequest(State, StrMessageType, StrMessageTokens).
 
 handleRequest(_State, "Ping", _MessageTokens) ->
@@ -33,6 +32,14 @@ handleRequest(_State, "register", MessageTokens) ->
 handleRequest(_State, "logIn", MessageTokens) ->
 	Username = lists:nth(1, MessageTokens),
 	engine ! {logIn, Username, self()};
+handleRequest(_State, "queryMention", MessageTokens) ->
+	Username = lists:nth(1, MessageTokens),
+	Mention = lists:nth(2, MessageTokens),
+	engine ! {queryMention, Username, self(), Mention};
+handleRequest(_State, "queryHashtag", MessageTokens) ->
+	Username = lists:nth(1, MessageTokens),
+	Hashtag = lists:nth(2, MessageTokens),
+	engine ! {queryHashtag, Username, self(), Hashtag};
 handleRequest(_State, "logOut", MessageTokens) ->
 	Username = lists:nth(1, MessageTokens),
 	engine ! {logOut, Username};
@@ -48,13 +55,8 @@ handleRequest(_State, "sendTweet", MessageTokens) ->
 	MyUsername = lists:nth(1, MessageTokens),
 	OriginalTweeter = lists:nth(2, MessageTokens),
 	Message = lists:nth(3, MessageTokens),
-	io:fwrite("Before Hash\n"),
 	HashTags = extract("#", Message),
-	printList(HashTags),
-	io:fwrite("Before Mention\n"),
 	Mentions = extract("@", Message),
-	printList(Mentions),
-	io:fwrite("After all\n"),
 	Tweet = #tweet{text = Message, hashTags = HashTags, mentions = Mentions, originalTweeter = OriginalTweeter, actualTweeter = MyUsername},
 	engine ! {sendTweet, MyUsername, Tweet};
 handleRequest(_, _, _) ->
@@ -72,11 +74,16 @@ formatTweetForSending(Tweet) ->
 
 % Recieve messages from the engine
 websocket_info({recieveQuery, Data}, State) ->
-	SendTweets = list_to_binary(formatTweetsForSending("", Data)),
+	SendTweets = list_to_binary("queryMyUser^" ++ formatTweetsForSending("", Data)),
+	{reply, {text, SendTweets}, State};
+websocket_info({recieveQueryMention, Data}, State) ->
+	SendTweets = list_to_binary("queryMention^" ++ formatTweetsForSending("", Data)),
+	{reply, {text, SendTweets}, State};
+websocket_info({recieveQueryHashtag, Data}, State) ->
+	SendTweets = list_to_binary("queryHashtag^" ++ formatTweetsForSending("", Data)),
 	{reply, {text, SendTweets}, State};
 websocket_info({publishTweet, Data}, State) ->
-	io:write(Data),
-	SendTweet = list_to_binary(formatTweetsForSending("", [Data])),
+	SendTweet = list_to_binary("queryMyUser^" ++ formatTweetsForSending("", [Data])),
 	{reply, {text, SendTweet}, State};
 websocket_info(_Request, _State) ->
 	ok.
@@ -93,6 +100,3 @@ binListToStringList(ResultList, []) ->
 	ResultList;
 binListToStringList(ResultList, [BinListEntry | BinListRemaining]) ->
 	binListToStringList(ResultList ++ [binary_to_list(BinListEntry)], BinListRemaining).
-
-printList(List) ->
-     io:fwrite("~w~n",[List]).
